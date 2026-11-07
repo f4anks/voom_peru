@@ -4,6 +4,12 @@ const SUPABASE_KEY = 'tu-anon-key';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 document.addEventListener('DOMContentLoaded', () => {
+  // 1. VALIDACIÓN DE SEGURIDAD: Bloquear si se ejecuta en navegador web normal
+  if (!verificarModoStandalone()) {
+    bloquearAccesoWeb();
+    return; // Detiene la ejecución de todo el script
+  }
+
   const btnTabLogin = document.getElementById('btn-tab-login');
   const btnTabRegister = document.getElementById('btn-tab-register');
   const formLogin = document.getElementById('form-login');
@@ -44,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (error) throw error;
 
-        // Extraer nombre del usuario y guardar en localStorage
         const nombreUsuario = data.user.user_metadata?.full_name || email.split('@')[0];
         localStorage.setItem('voom_user_name', nombreUsuario);
 
@@ -82,7 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (error) throw error;
 
-        // Guardar el nombre en el navegador inmediatamente
         localStorage.setItem('voom_user_name', name);
 
         mostrarMensaje("Cuenta creada exitosamente.", "éxito");
@@ -115,3 +119,61 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 });
+
+// Función para comprobar si la PWA se abrió instalada
+function verificarModoStandalone() {
+  return (window.matchMedia('(display-mode: standalone)').matches) || 
+         (window.navigator.standalone === true) || 
+         document.referrer.includes('android-app://');
+}
+
+// Función que bloquea la pantalla si se abre en el navegador web
+function bloquearAccesoWeb() {
+  const appContent = document.getElementById('app-content');
+  const installOverlay = document.getElementById('pwa-install-overlay');
+
+  if (appContent) {
+    appContent.classList.add('hidden'); // Ocultar formularios de login/registro
+  }
+
+  if (installOverlay) {
+    installOverlay.classList.remove('hidden'); // Mantener visible el aviso de instalación
+
+    // Modificar el texto del cuadro para explicar que la web está restringida
+    const cajaModal = installOverlay.querySelector('.max-w-sm');
+    if (cajaModal) {
+      cajaModal.innerHTML = `
+        <div class="inline-flex items-center justify-center w-20 h-20 bg-red-500 rounded-3xl text-white shadow-xl shadow-red-500/30">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="text-2xl font-black text-slate-900 tracking-tight">Acceso Restringido</h2>
+          <p class="text-xs font-medium text-slate-500 mt-2 leading-relaxed">
+            Por seguridad, <strong>Voom</strong> no puede utilizarse desde el navegador web. Debes instalar y abrir la aplicación desde tu pantalla de inicio.
+          </p>
+        </div>
+        <button id="btn-pwa-install-forced" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-orange-500/30 text-sm tracking-wide">
+          Instalar Aplicación Ahora 🚀
+        </button>
+      `;
+
+      // Reactivar el botón de instalación dentro del modal bloqueado
+      setTimeout(() => {
+        const btnForced = document.getElementById('btn-pwa-install-forced');
+        if (btnForced) {
+          btnForced.addEventListener('click', async () => {
+            if (window.deferredPrompt) {
+              window.deferredPrompt.prompt();
+              await window.deferredPrompt.userChoice;
+              window.deferredPrompt = null;
+            } else {
+              alert("Toca los tres puntos (⋮) de Chrome y selecciona 'Agregar a la pantalla principal' o 'Instalar aplicación'.");
+            }
+          });
+        }
+      }, 100);
+    }
+  }
+}
