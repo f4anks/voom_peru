@@ -25,6 +25,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   userConductor = user;
 
+  // Consultar comunicados de la administración para el conductor
+  verificarAnunciosGlobales();
+
   // Consultar perfil completo del conductor (nombre, cédula, estado y vehículo)
   const { data: perfil, error } = await supabaseClient
     .from('perfiles')
@@ -178,4 +181,43 @@ async function logout() {
     await supabaseClient.auth.signOut();
   }
   window.location.href = 'index.html';
+}
+
+// Verificación de Anuncios Globales desde Supabase para Conductores
+async function verificarAnunciosGlobales() {
+  try {
+    if (!supabaseClient) return;
+
+    const { data, error } = await supabaseClient
+      .from('anuncios')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error || !data || data.length === 0) return;
+
+    const ultimoAnuncio = data[0];
+    const ultimoVistoId = localStorage.getItem('voom_ultimo_anuncio_id_conductor');
+
+    if (String(ultimoVistoId) !== String(ultimoAnuncio.id)) {
+      const modal = document.getElementById('modal-anuncio');
+      const tituloEl = document.getElementById('anuncio-modal-titulo');
+      const mensajeEl = document.getElementById('anuncio-modal-mensaje');
+
+      if (modal && tituloEl && mensajeEl) {
+        tituloEl.textContent = ultimoAnuncio.titulo || "Comunicado Oficial";
+        mensajeEl.textContent = ultimoAnuncio.mensaje || "";
+        
+        modal.classList.remove('hidden');
+        localStorage.setItem('voom_ultimo_anuncio_id_conductor', ultimoAnuncio.id);
+      }
+    }
+  } catch (err) {
+    console.error("Error al obtener anuncios globales para conductor:", err);
+  }
+}
+
+function cerrarModalAnuncio() {
+  const modal = document.getElementById('modal-anuncio');
+  if (modal) modal.classList.add('hidden');
 }
