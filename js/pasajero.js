@@ -57,7 +57,7 @@ function obtenerUbicacionUsuario() {
         markerOrigen = L.marker([lat, lng], { icon: iconOrigen }).addTo(map);
       }
 
-      // Convertir Latitud/Longitud a Dirección de texto (Geocoding inverso)
+      // Convertir Latitud/Longitud a Dirección de texto
       await obtenerDireccionTexto(lat, lng);
     },
     (error) => {
@@ -76,23 +76,29 @@ function obtenerUbicacionUsuario() {
   );
 }
 
-// 3. Transformar coordenadas en nombre de calle / ciudad (Nominatim API)
+// 3. Transformar coordenadas en dirección de texto limpia (Sin API Key)
 async function obtenerDireccionTexto(lat, lng) {
   const inputOrigen = document.getElementById('origen-txt');
   try {
-    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=es`;
+    
+    const response = await fetch(url);
     const data = await response.json();
 
-    if (data && data.display_name) {
-      // Extraer una dirección corta (calle, sector o barrio)
-      const partes = data.display_name.split(',');
-      const direccionCorta = partes.slice(0, 3).join(',').trim();
-      inputOrigen.value = direccionCorta;
+    if (data) {
+      const sector = data.locality || data.city || data.principalSubdivision || "";
+      const ciudad = data.countryName ? `, ${data.countryName}` : "";
+      
+      if (sector) {
+        inputOrigen.value = `${sector}${ciudad}`;
+      } else {
+        inputOrigen.value = `Ubicación actual (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      }
     } else {
-      inputOrigen.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      inputOrigen.value = `Ubicación actual (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
     }
   } catch (err) {
-    console.error("Error al geocodificar dirección:", err);
-    inputOrigen.value = `Ubicación actual (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+    console.error("Error al obtener dirección:", err);
+    inputOrigen.value = `Ubicación detectada (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
   }
 }
