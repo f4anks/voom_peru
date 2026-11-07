@@ -167,13 +167,11 @@
 
       if (input.type === 'password') {
         input.type = 'text';
-        // Cambiar icono a ojo tachado (ocultar)
         icon.innerHTML = `
           <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.05 10.05 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18"/>
         `;
       } else {
         input.type = 'password';
-        // Cambiar icono a ojo normal (ver)
         icon.innerHTML = `
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -181,7 +179,6 @@
       }
     }
 
-    // Variable global para capturar la orden nativa del navegador
     window.deferredPrompt = null;
 
     const overlay = document.getElementById('pwa-install-overlay');
@@ -189,7 +186,6 @@
     const btnInstall = document.getElementById('btn-pwa-install');
     const iosInstructions = document.getElementById('ios-instructions');
 
-    // 1. Detectar si la app ya está instalada o abierta como PWA
     function isRunningStandalone() {
       return (window.matchMedia('(display-mode: standalone)').matches) || 
              (window.navigator.standalone === true) || 
@@ -208,21 +204,17 @@
 
     window.addEventListener('DOMContentLoaded', checkPWAState);
 
-    // 2. CAPTURA CRÍTICA: Guardar el evento del sistema apenas el navegador lo emita
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       window.deferredPrompt = e;
       console.log('✅ Sistema listo para crear acceso directo / PWA');
     });
 
-    // 3. ACCIÓN DIRECTA DEL BOTÓN
     if (btnInstall) {
       btnInstall.addEventListener('click', async () => {
         if (window.deferredPrompt) {
           window.deferredPrompt.prompt();
           const { outcome } = await window.deferredPrompt.userChoice;
-          console.log('Resultado de instalación:', outcome);
-          
           if (outcome === 'accepted') {
             if (overlay) overlay.classList.add('hidden');
             if (appContent) appContent.classList.remove('hidden');
@@ -237,20 +229,24 @@
           return;
         }
 
-        alert("El navegador está preparando el instalador. Si no aparece la ventana emergente, toca los tres puntos (⋮) de Chrome y selecciona 'Agregar a la pantalla principal'.");
+        // Mostrar instrucciones visuales en vez de un alert()
+        let msgBox = document.getElementById('install-msg-box');
+        if (!msgBox) {
+          msgBox = document.createElement('div');
+          msgBox.id = 'install-msg-box';
+          msgBox.className = 'mt-3 p-3 bg-orange-50 border border-orange-200 rounded-2xl text-[11px] font-bold text-orange-800 text-center animate-fade-in';
+          btnInstall.insertAdjacentElement('afterend', msgBox);
+        }
+        msgBox.innerHTML = "💡 Toca el botón de instalación en la barra de direcciones de tu navegador (arriba a la derecha) o los tres puntos (⋮) para instalar Voom.";
       });
     }
 
-    // 4. Registrar Service Worker obligatorio con ámbito explícito
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js', { scope: './' })
-          .then(reg => console.log('SW activo:', reg.scope))
-          .catch(err => console.error('SW Error:', err));
+        navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(err => console.error('SW Error:', err));
       });
     }
 
-    // Protecciones de interfaz
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.addEventListener('keydown', e => {
       if (
