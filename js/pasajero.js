@@ -1,143 +1,98 @@
-// CONFIGURACIÓN DE SUPABASE
-const SUPABASE_URL = "https://gklquvthucityzgcamao.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM";
+let map;
+let markerOrigen;
+let coordsOrigen = null;
 
-let supabaseClient = null;
-let map = null;
-let passengerMarker = null;
-let userPasajero = null;
-let viajeActualId = null;
-
-window.addEventListener('DOMContentLoaded', async () => {
-  // Inicializar cliente Supabase evitando colisión con el SDK global
-  if (window.supabase && window.supabase.createClient) {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  } else {
-    console.error("SDK de Supabase no cargado.");
-    return;
-  }
-
-  // Validar sesión activa
-  const { data: { user } } = await supabaseClient.auth.getUser();
-  if (!user) {
-    window.location.href = 'index.html';
-    return;
-  }
-
-  userPasajero = user;
-
-  // Consultar perfil del pasajero
-  const { data: perfil } = await supabaseClient
-    .from('perfiles')
-    .select('nombre_completo')
-    .eq('id', user.id)
-    .single();
-
-  const nombreDisplay = perfil?.nombre_completo || user.user_metadata?.nombre_completo || user.email;
-  const elName = document.getElementById('user-name');
-  if (elName) elName.innerText = nombreDisplay;
-
-  // Inicializar mapa interactivo Leaflet
-  map = L.map('map').setView([10.4806, -66.9036], 14);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
-
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(position => {
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
-      map.setView([lat, lng], 15);
-      passengerMarker = L.marker([lat, lng]).addTo(map).bindPopup("<b>Tu Ubicación</b>").openPopup();
-      
-      const origenTxt = document.getElementById('origen-txt');
-      if (origenTxt) origenTxt.value = `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
-    }, () => {
-      const origenTxt = document.getElementById('origen-txt');
-      if (origenTxt) origenTxt.value = "Ubicación predeterminada (GPS inactivo)";
-    });
-  }
+// 1. Inicializar el Mapa al cargar la pantalla
+document.addEventListener('DOMContentLoaded', () => {
+  initMap();
+  obtenerUbicacionUsuario();
 });
 
-async function solicitarViaje() {
-  const destinoInput = document.getElementById('destino-txt');
-  const destino = destinoInput ? destinoInput.value.trim() : '';
+function initMap() {
+  // Coordenadas por defecto (Centro) mientras obtiene la ubicación real
+  map = L.map('map', { zoomControl: false }).setView([10.5000, -66.9167], 14);
 
-  if (!destino) {
-    alert("Por favor ingresa un destino válido.");
+  // Cargar capa de mapa elegante (CartoDB / OpenStreetMap)
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  // Agregar control de zoom abajo a la derecha para no obstruir el diseño
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+}
+
+// 2. Obtener la Geolocalización del Dispositivo
+function obtenerUbicacionUsuario() {
+  const inputOrigen = document.getElementById('origen-txt');
+
+  if (!navigator.geolocation) {
+    if (inputOrigen) inputOrigen.value = "Geolocalización no soportada";
     return;
   }
 
-  const btnSolicitar = document.getElementById('btn-solicitar');
-  if (btnSolicitar) btnSolicitar.disabled = true;
+  inputOrigen.value = "Obteniendo tu ubicación...";
 
-  actualizarEstadoPasajero("Buscando un conductor cercano...");
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      coordsOrigen = { lat, lng };
 
-  // Insertar solicitud en la tabla de viajes
-  const { data, error } = await supabaseClient
-    .from('viajes')
-    .insert([
-      {
-        pasajero_id: userPasajero.id,
-        destino_direccion: destino,
-        precio: (Math.random() * 5 + 5).toFixed(2), // Tarifa estimada de prueba
-        estado: 'buscando'
+      // Centrar mapa en la ubicación del usuario con zoom cercano
+      map.setView([lat, lng], 16);
+
+      // Crear icono personalizado para el Origen (Punto A)
+      const iconOrigen = L.divIcon({
+        className: 'custom-pin-origen',
+        html: `<div class="w-5 h-5 bg-emerald-500 border-4 border-white rounded-full shadow-lg animate-pulse"></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+
+      // Si ya existía un marcador previo, actualizarlo; si no, crearlo
+      if (markerOrigen) {
+        markerOrigen.setLatLng([lat, lng]);
+      } else {
+        markerOrigen = L.marker([lat, lng], { icon: iconOrigen }).addTo(map);
       }
-    ])
-    .select()
-    .single();
 
-  if (error) {
-    alert("Error al solicitar el viaje: " + error.message);
-    if (btnSolicitar) btnSolicitar.disabled = false;
-    ocultarEstadoPasajero();
-    return;
-  }
-
-  viajeActualId = data.id;
-  escucharEstadoViaje(viajeActualId);
-}
-
-function actualizarEstadoPasajero(textoEstado) {
-  const box = document.getElementById('estado-viaje-box');
-  const texto = document.getElementById('estado-viaje-texto');
-  
-  if (box && texto) {
-    box.classList.remove('hidden');
-    texto.innerHTML = `
-      <div class="flex items-center justify-center space-x-2">
-        <div class="w-2 h-2 bg-orange-500 rounded-full animate-ping"></div>
-        <span>${textoEstado}</span>
-      </div>
-    `;
-  }
-}
-
-function ocultarEstadoPasajero() {
-  const box = document.getElementById('estado-viaje-box');
-  if (box) box.classList.add('hidden');
-}
-
-function escucharEstadoViaje(idViaje) {
-  supabaseClient
-    .channel(`viaje-${idViaje}`)
-    .on(
-      'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'viajes', filter: `id=eq.${idViaje}` },
-      (payload) => {
-        const viajeActualizado = payload.new;
-        if (viajeActualizado.estado === 'aceptado') {
-          actualizarEstadoPasajero("🎉 ¡Conductor asignado! En camino a recogerte.");
-          alert("¡Un conductor ha aceptado tu viaje!");
-        }
+      // Convertir Latitud/Longitud a Dirección de texto (Geocoding inverso)
+      await obtenerDireccionTexto(lat, lng);
+    },
+    (error) => {
+      console.warn("Error obteniendo ubicación:", error);
+      let msj = "No se pudo obtener la ubicación";
+      if (error.code === error.PERMISSION_DENIED) {
+        msj = "Permiso de ubicación denegado";
       }
-    )
-    .subscribe();
+      if (inputOrigen) inputOrigen.value = msj;
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
+  );
 }
 
-async function logout() {
-  if (supabaseClient) {
-    await supabaseClient.auth.signOut();
+// 3. Transformar coordenadas en nombre de calle / ciudad (Nominatim API)
+async function obtenerDireccionTexto(lat, lng) {
+  const inputOrigen = document.getElementById('origen-txt');
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+    const data = await response.json();
+
+    if (data && data.display_name) {
+      // Extraer una dirección corta (calle, sector o barrio)
+      const partes = data.display_name.split(',');
+      const direccionCorta = partes.slice(0, 3).join(',').trim();
+      inputOrigen.value = direccionCorta;
+    } else {
+      inputOrigen.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    }
+  } catch (err) {
+    console.error("Error al geocodificar dirección:", err);
+    inputOrigen.value = `Ubicación actual (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
   }
-  window.location.href = 'index.html';
 }
