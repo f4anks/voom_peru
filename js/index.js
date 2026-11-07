@@ -1,6 +1,6 @@
-// Inicialización del cliente Supabase (Reemplaza con tus llaves reales)
-const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
-const SUPABASE_KEY = 'tu-anon-key';
+// Inicialización del cliente Supabase con tus credenciales reales
+const SUPABASE_URL = 'https://gklquvthucityzgcamao.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // 2. SESIÓN PERSISTENTE: Si ya hay una sesión activa, entrar directo a la app
+  // 2. SESIÓN PERSISTENTE: Si ya hay una sesión activa, entrar directo a la app sin pedir clave
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session && session.user) {
