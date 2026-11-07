@@ -9,20 +9,47 @@ document.addEventListener('DOMContentLoaded', () => {
   obtenerUbicacionUsuario();
 });
 
-// Cargar el nombre guardado en sesión o poner un valor por defecto
-function cargarNombreUsuario() {
+// Cargar el nombre real del usuario desde Supabase o localStorage
+async function cargarNombreUsuario() {
   const userNameEl = document.getElementById('user-name');
-  if (userNameEl) {
-    const usuarioGuardado = localStorage.getItem('voom_user_name') || 'Pasajero Voom';
-    userNameEl.textContent = usuarioGuardado;
+  if (!userNameEl) return;
+
+  try {
+    // Si usas cliente de Supabase globalmente configurado
+    if (typeof supabaseClient !== 'undefined') {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session && session.user) {
+        // Intentar buscar el nombre en la tabla de perfiles o metadatos
+        const userMetadata = session.user.user_metadata;
+        if (userMetadata && userMetadata.full_name) {
+          userNameEl.textContent = userMetadata.full_name;
+          return;
+        } else if (session.user.email) {
+          // Si no hay nombre completo, usar la primera parte del correo
+          const nombreCorreo = session.user.email.split('@')[0];
+          userNameEl.textContent = nombreCorreo.charAt(0).toUpperCase() + nombreCorreo.slice(1);
+          return;
+        }
+      }
+    }
+
+    // Respaldo secundario desde localStorage si guardaste el nombre al iniciar sesión
+    const nombreLocal = localStorage.getItem('voom_user_name');
+    if (nombreLocal) {
+      userNameEl.textContent = nombreLocal;
+    } else {
+      userNameEl.textContent = "Pasajero";
+    }
+  } catch (err) {
+    console.error("Error al cargar nombre de usuario:", err);
+    userNameEl.textContent = "Pasajero";
   }
 }
 
 function initMap() {
-  // Inicializar mapa centrado
   map = L.map('map', { zoomControl: false }).setView([10.5000, -66.9167], 14);
 
-  // Capa OFICIAL OpenStreetMap (NUNCA pide API Key ni muestra marcas de agua)
+  // Capa OFICIAL OpenStreetMap (Libre de API Keys)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '© OpenStreetMap'
