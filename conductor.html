@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Voladitos - Panel Driver</title>
+
+  <!-- Metadatos PWA -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#f8fafc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Voladitos">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    #map { height: calc(100vh - 76px); width: 100%; z-index: 1; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Header Superior -->
+  <header class="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-6 py-3.5 flex items-center justify-between z-[1001] shadow-xs">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 bg-gradient-to-tr from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center text-white font-black text-base shadow-md shadow-orange-500/25">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-sm font-black text-slate-900 tracking-tight leading-tight">Voladitos Driver</h1>
+        <span class="text-[10px] text-emerald-600 font-bold uppercase tracking-wider flex items-center space-x-1">
+          <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+          <span>Disponible para carreras</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Identificación del Conductor -->
+    <div class="flex items-center space-x-4">
+      <div class="hidden sm:flex flex-col text-right">
+        <span id="user-name" class="text-xs font-black text-slate-800">Cargando...</span>
+        <span id="user-cedula" class="text-[10px] font-bold text-orange-600">Cédula: ...</span>
+      </div>
+      <button onclick="logout()" class="text-xs bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 font-bold px-4 py-2.5 rounded-xl transition-all border border-slate-200">
+        Salir
+      </button>
+    </div>
+  </header>
+
+  <!-- Mapa y Panel de Solicitudes -->
+  <div class="relative flex-1">
+    <div id="map"></div>
+
+    <!-- Contenedor Flotante de Solicitudes Cercanas -->
+    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 w-11/12 max-w-md bg-white/95 backdrop-blur-xl p-6 rounded-3xl border border-slate-200/80 shadow-[0_15px_40px_-15px_rgba(0,0,0,0.12)] z-[1000]">
+      <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+        <h2 class="text-xs font-black text-slate-900 uppercase tracking-wider">Solicitudes Disponibles</h2>
+        <span class="w-2.5 h-2.5 bg-orange-500 rounded-full animate-ping"></span>
+      </div>
+      
+      <div id="lista-viajes" class="space-y-3 max-h-64 overflow-y-auto pr-1">
+        <p class="text-xs text-slate-400 text-center py-6 font-semibold">Esperando nuevas carreras...</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/conductor.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.error('SW Error:', err));
+      });
+    }
+  </script>
+</body>
+</html>
