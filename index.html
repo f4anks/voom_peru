@@ -16,6 +16,20 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   
+  <!-- OneSignal Web Push SDK -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: "98bfb199-5190-4c51-93b0-2cffb11c79e7",
+        notifyButton: {
+          enable: true, // Muestra el botón flotante en pantalla para suscribirse
+        },
+      });
+    });
+  </script>
+
   <style>
     body { 
       font-family: 'Plus Jakarta Sans', sans-serif;
@@ -228,8 +242,6 @@
         return;
       }
 
-      // Si el navegador de escritorio aún no emitió el prompt automático, 
-      // mostramos una guía limpia dentro de la tarjeta sin usar alert()
       let msgBox = document.getElementById('install-msg-box');
       if (!msgBox) {
         msgBox = document.createElement('div');
