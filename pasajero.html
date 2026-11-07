@@ -76,7 +76,18 @@
         <!-- Input Destino -->
         <div class="relative flex items-center">
           <div class="w-3.5 h-3.5 bg-orange-500 rounded-full border-2 border-white shadow-xs absolute left-4 z-10"></div>
-          <input type="text" id="destino-txt" placeholder="Ingresa punto de destino..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" />
+          <input type="text" id="destino-txt" placeholder="Ingresa punto de destino o busca..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" />
+        </div>
+
+        <!-- Tarjeta de Estimación de Precio y Distancia -->
+        <div id="precio-box" class="hidden p-4 bg-emerald-50/80 rounded-2xl border border-emerald-200/80 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] text-emerald-600 font-black uppercase tracking-widest block">Precio Estimado</span>
+            <span id="distancia-texto" class="text-[11px] font-semibold text-slate-500">0.0 km</span>
+          </div>
+          <div class="text-right">
+            <span id="precio-monto" class="text-xl font-black text-emerald-700 leading-none">$0.00</span>
+          </div>
         </div>
 
         <!-- Estatus del Viaje -->
@@ -92,7 +103,10 @@
     </div>
   </div>
 
-  <script src="js/pasajero.js"></script>
+  <!-- Carga limpia de tus dos archivos JavaScript separados -->
+  <script src="./js/mapa.js"></script>
+  <script src="./js/pasajero.js"></script>
+
   <script>
     // Función para forzar la actualización del código fuente limpiando Service Workers y Caché local
     async function forceAppUpdate() {
@@ -116,13 +130,12 @@
           console.error("Error al borrar cachés:", e);
         }
       }
-      // Forzar recarga completa omitiendo la caché del navegador
       window.location.reload(true);
     }
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(err => console.error('SW Error:', err));
+        navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(err => console.error('SW Error:', err));
       });
     }
   </script>
