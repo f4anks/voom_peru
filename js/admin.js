@@ -191,55 +191,6 @@ function cerrarModalDocs() {
   if (modal) modal.classList.add('hidden');
 }
 
-// Transmitir Anuncio Global
-async function enviarAnuncioGlobal() {
-  const elTitulo = document.getElementById('anuncio-titulo');
-  const elMensaje = document.getElementById('anuncio-mensaje');
-  const elStatus = document.getElementById('anuncio-status');
-
-  if (!elTitulo || !elMensaje) return;
-
-  const titulo = elTitulo.value.trim();
-  const mensaje = elMensaje.value.trim();
-
-  if (!titulo || !mensaje) {
-    alert("Por favor completa el título y el mensaje del anuncio.");
-    return;
-  }
-
-  if (elStatus) {
-    elStatus.textContent = "Transmitiendo anuncio...";
-    elStatus.className = "text-xs font-bold text-orange-600";
-  }
-
-  try {
-    const { error } = await supabaseClient
-      .from('anuncios')
-      .insert([{ titulo: titulo, mensaje: mensaje, created_at: new Date() }]);
-
-    if (error) throw error;
-
-    if (elStatus) {
-      elStatus.textContent = "¡Anuncio enviado exitosamente a toda la red Voom! 🚀";
-      elStatus.className = "text-xs font-bold text-emerald-600";
-    }
-
-    elTitulo.value = '';
-    elMensaje.value = '';
-
-    setTimeout(() => {
-      if (elStatus) elStatus.textContent = '';
-    }, 4000);
-
-  } catch (err) {
-    console.error("Error al enviar anuncio:", err);
-    if (elStatus) {
-      elStatus.textContent = "Error al enviar: " + err.message;
-      elStatus.className = "text-xs font-bold text-red-600";
-    }
-  }
-}
-
 async function logoutAdmin() {
   if (supabaseClient) {
     await supabaseClient.auth.signOut();
@@ -247,8 +198,7 @@ async function logoutAdmin() {
   window.location.href = 'index.html';
 }
 
-// Exponer las funciones globalmente para evitar fallos con los atributos onclick de HTML
-window.enviarAnuncioGlobal = enviarAnuncioGlobal;
+// Exponer las funciones globalmente para el panel administrativo
 window.filtrarConductores = filtrarConductores;
 window.cambiarEstadoConductor = cambiarEstadoConductor;
 window.verDocumentos = verDocumentos;
