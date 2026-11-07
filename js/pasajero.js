@@ -12,13 +12,13 @@ function initMap() {
   // Coordenadas por defecto (Centro) mientras obtiene la ubicación real
   map = L.map('map', { zoomControl: false }).setView([10.5000, -66.9167], 14);
 
-  // Cargar capa de mapa elegante (CartoDB / OpenStreetMap)
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  // Capa oficial de OpenStreetMap LIBRE Y GRATUITA (Sin marcas de agua ni API Keys)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '© OpenStreetMap'
   }).addTo(map);
 
-  // Agregar control de zoom abajo a la derecha para no obstruir el diseño
+  // Agregar control de zoom abajo a la derecha para no obstruir la UI
   L.control.zoom({ position: 'bottomright' }).addTo(map);
 }
 
@@ -31,7 +31,7 @@ function obtenerUbicacionUsuario() {
     return;
   }
 
-  inputOrigen.value = "Obteniendo tu ubicación...";
+  if (inputOrigen) inputOrigen.value = "Obteniendo tu ubicación...";
 
   navigator.geolocation.getCurrentPosition(
     async (position) => {
@@ -39,10 +39,10 @@ function obtenerUbicacionUsuario() {
       const lng = position.coords.longitude;
       coordsOrigen = { lat, lng };
 
-      // Centrar mapa en la ubicación del usuario con zoom cercano
+      // Centrar mapa en la ubicación real con zoom cercano
       map.setView([lat, lng], 16);
 
-      // Crear icono personalizado para el Origen (Punto A)
+      // Icono verde animado para el Origen (Punto A)
       const iconOrigen = L.divIcon({
         className: 'custom-pin-origen',
         html: `<div class="w-5 h-5 bg-emerald-500 border-4 border-white rounded-full shadow-lg animate-pulse"></div>`,
@@ -50,21 +50,20 @@ function obtenerUbicacionUsuario() {
         iconAnchor: [10, 10]
       });
 
-      // Si ya existía un marcador previo, actualizarlo; si no, crearlo
       if (markerOrigen) {
         markerOrigen.setLatLng([lat, lng]);
       } else {
         markerOrigen = L.marker([lat, lng], { icon: iconOrigen }).addTo(map);
       }
 
-      // Convertir Latitud/Longitud a Dirección de texto
+      // Convertir coordenadas a nombre de dirección en texto
       await obtenerDireccionTexto(lat, lng);
     },
     (error) => {
       console.warn("Error obteniendo ubicación:", error);
       let msj = "No se pudo obtener la ubicación";
       if (error.code === error.PERMISSION_DENIED) {
-        msj = "Permiso de ubicación denegado";
+        msj = "Permiso de ubicación denegado (Revisa los permisos del navegador)";
       }
       if (inputOrigen) inputOrigen.value = msj;
     },
@@ -76,7 +75,7 @@ function obtenerUbicacionUsuario() {
   );
 }
 
-// 3. Transformar coordenadas en dirección de texto limpia (Sin API Key)
+// 3. Transformar coordenadas a dirección legible mediante BigDataCloud
 async function obtenerDireccionTexto(lat, lng) {
   const inputOrigen = document.getElementById('origen-txt');
   try {
