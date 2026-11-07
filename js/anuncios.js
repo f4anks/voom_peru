@@ -1,4 +1,8 @@
-// js/anuncios.js - Módulo unificado para Anuncios Globales con Tiempo Real
+// js/anuncios.js - Módulo unificado para Anuncios Globales (Realtime + Web Push)
+
+// CONFIGURACIÓN DE ONESIGNAL
+const ONESIGNAL_APP_ID = "TU_ONESIGNAL_APP_ID"; // Reemplaza por tu App ID de OneSignal
+const ONESIGNAL_REST_KEY = "TU_ONESIGNAL_REST_API_KEY"; // Reemplaza por tu REST API Key
 
 function obtenerClienteSupabase() {
   if (typeof supabaseClient !== 'undefined' && supabaseClient) {
@@ -38,6 +42,7 @@ async function enviarAnuncioGlobal() {
   }
 
   try {
+    // A. Guardar en Supabase para el historial y Realtime
     const { error } = await client
       .from('anuncios')
       .insert([{ 
@@ -48,6 +53,9 @@ async function enviarAnuncioGlobal() {
       }]);
 
     if (error) throw error;
+
+    // B. Enviar Notificación Push en segundo plano vía OneSignal
+    await dispararNotificacionPush(titulo, mensaje, destinatario);
 
     if (elStatus) {
       elStatus.textContent = `¡Anuncio enviado exitosamente a: ${destinatario.toUpperCase()}! 🚀`;
@@ -70,7 +78,44 @@ async function enviarAnuncioGlobal() {
   }
 }
 
-// 2. Mostrar Modal visualmente
+// Envío de Notificación Push para apps cerradas/en segundo plano
+async function dispararNotificacionPush(titulo, mensaje, destinatario) {
+  if (ONESIGNAL_APP_ID.includes("TU_ONESIGNAL") || ONESIGNAL_REST_KEY.includes("TU_ONESIGNAL")) {
+    console.warn("OneSignal Keys no configuradas aún en js/anuncios.js");
+    return;
+  }
+
+  // Mapeo de segmentos de audiencia en OneSignal
+  let includeSegments = ["Subscribed Users"];
+  if (destinatario === 'pasajeros') {
+    includeSegments = ["Pasajeros"]; // Filtro por Tag en OneSignal
+  } else if (destinatario === 'conductores') {
+    includeSegments = ["Conductores"]; // Filtro por Tag en OneSignal
+  }
+
+  const payload = {
+    app_id: ONESIGNAL_APP_ID,
+    headings: { es: titulo, en: titulo },
+    contents: { es: mensaje, en: mensaje },
+    included_segments: includeSegments,
+    chrome_web_icon: "./icons/icon-192.png"
+  };
+
+  try {
+    await fetch("https://onesignal.com/api/v1/notifications", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Authorization": `Basic ${ONESIGNAL_REST_KEY}`
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch (err) {
+    console.error("Error despachando Push:", err);
+  }
+}
+
+// 2. Mostrar Modal visualmente (App en primer plano)
 function desplegarModalAnuncio(titulo, mensaje) {
   const modal = document.getElementById('modal-anuncio');
   const tituloEl = document.getElementById('anuncio-modal-titulo');
@@ -115,7 +160,7 @@ async function verificarAnunciosGlobales(tipoRol = 'pasajero') {
       }
     }
 
-    // B. Escuchar en TIEMPO REAL (sin refrescar)
+    // B. Escuchar en TIEMPO REAL (app en primer plano)
     client
       .channel('cambios-anuncios-globales')
       .on(
