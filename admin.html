@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>voom - Panel de Control Admin</title>
+  <title>Voom - Panel de Control Admin</title>
 
   <!-- Metadatos PWA -->
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#f8fafc">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Voladitos Admin">
+  <meta name="apple-mobile-web-app-title" content="Voom Admin">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -31,7 +31,7 @@
         </svg>
       </div>
       <div>
-        <h1 class="text-base font-black text-slate-900 tracking-tight leading-tight">Voladitos Admin</h1>
+        <h1 class="text-base font-black text-slate-900 tracking-tight leading-tight">Voom Admin</h1>
         <span class="text-[10px] text-orange-600 font-extrabold uppercase tracking-wider">Gestión de Flota</span>
       </div>
     </div>
@@ -47,22 +47,33 @@
   <!-- Contenido Principal -->
   <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 space-y-6">
     
-    <!-- Tarjeta de Envío de Anuncios Globales -->
+    <!-- Tarjeta de Envío de Anuncios Globales por Destinatario -->
     <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.05)] space-y-4">
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center font-bold text-lg">
           📢
         </div>
         <div>
-          <h2 class="text-sm font-black text-slate-900 tracking-tight uppercase">Enviar Anuncio Global a la Flota y Pasajeros</h2>
-          <p class="text-xs font-semibold text-slate-500">Transmite un comunicado o notificación a todos los usuarios activos de Voladitos</p>
+          <h2 class="text-sm font-black text-slate-900 tracking-tight uppercase">Enviar Anuncio a la Red Voom</h2>
+          <p class="text-xs font-semibold text-slate-500">Transmite un comunicado dirigido a pasajeros, conductores o ambos</p>
         </div>
       </div>
 
       <div class="space-y-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Título del Anuncio</label>
-          <input type="text" id="anuncio-titulo" placeholder="Ej. ¡Tarifa especial este fin de semana!" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white transition-all" />
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="md:col-span-2">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Título del Anuncio</label>
+            <input type="text" id="anuncio-titulo" placeholder="Ej. ¡Tarifa especial este fin de semana!" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white transition-all" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Dirigido a</label>
+            <select id="anuncio-destinatario" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-bold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white transition-all">
+              <option value="todos">🌐 Toda la Red (Todos)</option>
+              <option value="pasajeros">👤 Solo Pasajeros</option>
+              <option value="conductores">🚘 Solo Conductores</option>
+            </select>
+          </div>
         </div>
 
         <div>
@@ -124,5 +135,6 @@
   </div>
 
   <script src="js/admin.js"></script>
+  <script src="js/anuncios.js"></script>
 </body>
 </html>
