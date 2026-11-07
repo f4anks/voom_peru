@@ -10,6 +10,7 @@ const CONFIG_TARIFA = {
 
 document.addEventListener('DOMContentLoaded', () => {
   cargarNombreUsuario();
+  verificarAnunciosGlobales(); // Consultar comunicados de la administración
   
   // 1. Inicializar el mapa mediante la función de mapa.js
   inicializarMapa(10.5000, -66.9167);
@@ -37,7 +38,7 @@ async function cargarNombreUsuario() {
 
   // 2. Si no está en localStorage, intentar consultarlo directamente desde la sesión activa de Supabase
   try {
-    if (typeof supabaseClient !== 'undefined') {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (session && session.user) {
         const nombre = session.user.user_metadata?.full_name || session.user.email.split('@')[0];
@@ -261,4 +262,43 @@ function calcularDistanciaLineal(lat1, lon1, lat2, lon2) {
             Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
             Math.sin(dLon/2) * Math.sin(dLon/2);
   return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+// Verificación de Anuncios Globales desde Supabase
+async function verificarAnunciosGlobales() {
+  try {
+    if (typeof supabaseClient === 'undefined' || !supabaseClient) return;
+
+    const { data, error } = await supabaseClient
+      .from('anuncios')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error || !data || data.length === 0) return;
+
+    const ultimoAnuncio = data[0];
+    const ultimoVistoId = localStorage.getItem('voom_ultimo_anuncio_id');
+
+    if (String(ultimoVistoId) !== String(ultimoAnuncio.id)) {
+      const modal = document.getElementById('modal-anuncio');
+      const tituloEl = document.getElementById('anuncio-modal-titulo');
+      const mensajeEl = document.getElementById('anuncio-modal-mensaje');
+
+      if (modal && tituloEl && mensajeEl) {
+        tituloEl.textContent = ultimoAnuncio.titulo || "Comunicado Oficial";
+        mensajeEl.textContent = ultimoAnuncio.mensaje || "";
+        
+        modal.classList.remove('hidden');
+        localStorage.setItem('voom_ultimo_anuncio_id', ultimoAnuncio.id);
+      }
+    }
+  } catch (err) {
+    console.error("Error al obtener anuncios globales:", err);
+  }
+}
+
+function cerrarModalAnuncio() {
+  const modal = document.getElementById('modal-anuncio');
+  if (modal) modal.classList.add('hidden');
 }
