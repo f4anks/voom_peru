@@ -141,14 +141,17 @@
 
   </div>
 
-  <script src="./js/index.js"></script>
+ <script src="./js/index.js"></script>
   <script>
-    let deferredPrompt = null;
+    // Variable global para capturar la orden nativa del navegador
+    window.deferredPrompt = null;
+
     const overlay = document.getElementById('pwa-install-overlay');
     const appContent = document.getElementById('app-content');
     const btnInstall = document.getElementById('btn-pwa-install');
     const iosInstructions = document.getElementById('ios-instructions');
 
+    // 1. Detectar si la app ya está instalada o abierta como PWA
     function isRunningStandalone() {
       return (window.matchMedia('(display-mode: standalone)').matches) || 
              (window.navigator.standalone) || 
@@ -157,48 +160,62 @@
 
     function checkPWAState() {
       if (isRunningStandalone()) {
-        overlay.classList.add('hidden');
-        appContent.classList.remove('hidden');
+        if (overlay) overlay.classList.add('hidden');
+        if (appContent) appContent.classList.remove('hidden');
       } else {
-        overlay.classList.remove('hidden');
-        appContent.classList.add('hidden');
+        if (overlay) overlay.classList.remove('hidden');
+        if (appContent) appContent.classList.add('hidden');
       }
     }
 
     window.addEventListener('DOMContentLoaded', checkPWAState);
 
+    // 2. CAPTURA CRÍTICA: Guardar el evento del sistema apenas el navegador lo emita
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
-      deferredPrompt = e;
+      window.deferredPrompt = e;
+      console.log('✅ Sistema listo para crear acceso directo / PWA');
     });
 
-    btnInstall.addEventListener('click', async () => {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-          overlay.classList.add('hidden');
-          appContent.classList.remove('hidden');
+    // 3. ACCIÓN DIRECTA DEL BOTÓN
+    if (btnInstall) {
+      btnInstall.addEventListener('click', async () => {
+        // A) Si el navegador capturó el permiso nativo, lanzamos la ventana oficial de instalación
+        if (window.deferredPrompt) {
+          window.deferredPrompt.prompt();
+          const { outcome } = await window.deferredPrompt.userChoice;
+          console.log('Resultado de instalación:', outcome);
+          
+          if (outcome === 'accepted') {
+            if (overlay) overlay.classList.add('hidden');
+            if (appContent) appContent.classList.remove('hidden');
+          }
+          window.deferredPrompt = null;
+          return;
         }
-        deferredPrompt = null;
-      } else {
+
+        // B) Si es iPhone / iPad (Safari)
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         if (isIOS) {
-          iosInstructions.classList.remove('hidden');
-        } else {
-          alert("Para instalar la aplicación, abre el menú de opciones de tu navegador (los tres puntos ⠇ arriba a la derecha) y selecciona 'Instalar aplicación' o 'Agregar a la pantalla principal'.");
+          if (iosInstructions) iosInstructions.classList.remove('hidden');
+          return;
         }
-      }
-    });
 
+        // C) Si Android aún no ha emitido el evento nativo en ese instante
+        alert("El navegador está preparando el instalador. Si no aparece la ventana emergente, toca los tres puntos (⋮) de Chrome y selecciona 'Agregar a la pantalla principal'.");
+      });
+    }
+
+    // 4. Registrar Service Worker obligatorio
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('SW registrado:', reg.scope))
+          .then(reg => console.log('SW activo:', reg.scope))
           .catch(err => console.error('SW Error:', err));
       });
     }
 
+    // Protecciones de interfaz
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.addEventListener('keydown', e => {
       if (
