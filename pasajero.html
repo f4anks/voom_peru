@@ -130,9 +130,17 @@
 
   <!-- Scripts JS independientes -->
   <script src="./js/mapa.js"></script>
+  <script src="./js/anuncios.js"></script>
   <script src="./js/pasajero.js"></script>
 
   <script>
+    // Inicializar verificación de anuncios para pasajeros al cargar la página
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof verificarAnunciosGlobales === 'function') {
+        verificarAnunciosGlobales('pasajero');
+      }
+    });
+
     // Función para forzar la actualización del código fuente limpiando Service Workers y Caché local
     async function forceAppUpdate() {
       if ('serviceWorker' in navigator) {
