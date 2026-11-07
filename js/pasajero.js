@@ -1,6 +1,3 @@
-let map;
-let markerOrigen;
-let markerDestino;
 let coordsOrigen = null;
 let coordsDestino = null;
 
@@ -11,11 +8,19 @@ const CONFIG_TARIFA = {
   tarifaMinima: 2.00     // Monto mínimo por viaje
 };
 
-// 1. Inicialización al cargar el DOM
 document.addEventListener('DOMContentLoaded', () => {
   cargarNombreUsuario();
-  initMap();
+  
+  // 1. Inicializar el mapa mediante la función de mapa.js
+  inicializarMapa(10.5000, -66.9167);
+
+  // 2. Conectar el clic del mapa con la lógica de destino y tarifas
+  window.onMapaClickCallback = async (lat, lng) => {
+    await establecerPuntoDestino(lat, lng);
+  };
+
   obtenerUbicacionUsuario();
+  inicializarBuscadorDestino();
 });
 
 // Cargar Nombre del Usuario con lectura prioritaria
@@ -23,14 +28,12 @@ async function cargarNombreUsuario() {
   const userNameEl = document.getElementById('user-name');
   if (!userNameEl) return;
 
-  // Paso A: Leer de inmediato el localStorage
   const nombreLocal = localStorage.getItem('voom_user_name');
   if (nombreLocal && nombreLocal.trim() !== '') {
     userNameEl.textContent = nombreLocal;
     return;
   }
 
-  // Paso B: Consultar sesión activa de Supabase como fallback
   try {
     if (typeof supabaseClient !== 'undefined') {
       const { data: { session } } = await supabaseClient.auth.getSession();
@@ -47,45 +50,86 @@ async function cargarNombreUsuario() {
     console.error("Error consultando sesión:", err);
   }
 
-  // Paso C: Si no hay datos guardados
   userNameEl.textContent = "Pasajero";
 }
 
-// Inicializar Mapa sin Marcas de Agua (OpenStreetMap Puro)
-function initMap() {
-  map = L.map('map', { zoomControl: false }).setView([10.5000, -66.9167], 14);
+// Configurar buscador de texto para el Punto B
+function inicializarBuscadorDestino() {
+  const inputDestino = document.getElementById('destino-txt');
+  if (!inputDestino) return;
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap'
-  }).addTo(map);
-
-  L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-  // Seleccionar destino al hacer clic en el mapa
-  map.on('click', async (e) => {
-    const { lat, lng } = e.latlng;
-    coordsDestino = { lat, lng };
-
-    const iconDestino = L.divIcon({
-      className: 'custom-pin-destino',
-      html: `<div class="w-5 h-5 bg-orange-500 border-4 border-white rounded-full shadow-lg animate-bounce"></div>`,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
-    });
-
-    if (markerDestino) {
-      markerDestino.setLatLng([lat, lng]);
-    } else {
-      markerDestino = L.marker([lat, lng], { icon: iconDestino }).addTo(map);
+  inputDestino.addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const query = inputDestino.value.trim();
+      if (query.length > 2) {
+        await buscarDestinoPorTexto(query);
+      }
     }
-
-    await obtenerTextoDestino(lat, lng);
-    calcularTarifaViaje();
   });
 }
 
-// 2. Obtener Geolocalización actual
+// Buscar coordenadas escribiendo el destino
+async function buscarDestinoPorTexto(query) {
+  const inputDestino = document.getElementById('destino-txt');
+  try {
+    if (inputDestino) inputDestino.value = "Buscando ubicación...";
+
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data && data.length > 0) {
+      const lat = parseFloat(data[0].lat);
+      const lng = parseFloat(data[0].lon);
+      await establecerPuntoDestino(lat, lng, data[0].display_name);
+    } else {
+      alert("No se encontró la dirección. Intenta con un nombre más específico.");
+      if (inputDestino) inputDestino.value = query;
+    }
+  } catch (err) {
+    console.error("Error en búsqueda de destino:", err);
+    alert("Error de red al buscar el destino.");
+  }
+}
+
+// Establecer Punto B (Destino)
+async function establecerPuntoDestino(lat, lng, nombrePersonalizado = null) {
+  coordsDestino = { lat, lng };
+
+  // Validar radio máximo de cobertura (Ej: 50 km desde el Origen)
+  if (coordsOrigen) {
+    const distanciaKm = calcularDistanciaLineal(coordsOrigen.lat, coordsOrigen.lng, lat, lng);
+    if (distanciaKm > 50) {
+      alert("El destino seleccionado está fuera de la zona de cobertura actual.");
+      return;
+    }
+  }
+
+  actualizarMarcadorDestino(lat, lng);
+  centrarMapa(lat, lng, 15);
+
+  const inputDestino = document.getElementById('destino-txt');
+  if (nombrePersonalizado) {
+    const partes = nombrePersonalizado.split(',');
+    if (inputDestino) inputDestino.value = partes.slice(0, 2).join(',').trim();
+  } else {
+    try {
+      const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=es`;
+      const response = await fetch(url);
+      const data = await response.json();
+      if (inputDestino) {
+        inputDestino.value = data.locality || `Punto seleccionado (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      }
+    } catch (e) {
+      if (inputDestino) inputDestino.value = `Punto seleccionado`;
+    }
+  }
+
+  calcularTarifaViaje();
+}
+
+// Obtener Geolocalización del Origen (Punto A)
 function obtenerUbicacionUsuario() {
   const inputOrigen = document.getElementById('origen-txt');
 
@@ -102,72 +146,30 @@ function obtenerUbicacionUsuario() {
       const lng = position.coords.longitude;
       coordsOrigen = { lat, lng };
 
-      map.setView([lat, lng], 16);
+      centrarMapa(lat, lng, 16);
+      actualizarMarcadorOrigen(lat, lng);
 
-      const iconOrigen = L.divIcon({
-        className: 'custom-pin-origen',
-        html: `<div class="w-5 h-5 bg-emerald-500 border-4 border-white rounded-full shadow-lg animate-pulse"></div>`,
-        iconSize: [20, 20],
-        iconAnchor: [10, 10]
-      });
-
-      if (markerOrigen) {
-        markerOrigen.setLatLng([lat, lng]);
-      } else {
-        markerOrigen = L.marker([lat, lng], { icon: iconOrigen }).addTo(map);
+      try {
+        const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=es`;
+        const response = await fetch(url);
+        const data = await response.json();
+        if (inputOrigen) {
+          inputOrigen.value = `${data.locality || ''}${data.countryName ? ', ' + data.countryName : ''}`;
+        }
+      } catch (err) {
+        if (inputOrigen) inputOrigen.value = `Ubicación actual (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
       }
-
-      await obtenerDireccionTexto(lat, lng);
     },
     (error) => {
-      console.warn("Error obteniendo ubicación:", error);
       let msj = "No se pudo obtener la ubicación";
-      if (error.code === error.PERMISSION_DENIED) {
-        msj = "Permiso de GPS denegado";
-      }
+      if (error.code === error.PERMISSION_DENIED) msj = "Permiso de GPS denegado";
       if (inputOrigen) inputOrigen.value = msj;
     },
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
   );
 }
 
-// Transformar Origen a Texto usando BigDataCloud
-async function obtenerDireccionTexto(lat, lng) {
-  const inputOrigen = document.getElementById('origen-txt');
-  try {
-    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=es`;
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (data && data.locality) {
-      inputOrigen.value = `${data.locality}${data.countryName ? ', ' + data.countryName : ''}`;
-    } else {
-      inputOrigen.value = `Ubicación actual (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-    }
-  } catch (err) {
-    inputOrigen.value = `Ubicación detectada (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-  }
-}
-
-// Transformar Destino a Texto
-async function obtenerTextoDestino(lat, lng) {
-  const inputDestino = document.getElementById('destino-txt');
-  try {
-    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=es`;
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (data && data.locality) {
-      inputDestino.value = `${data.locality}`;
-    } else {
-      inputDestino.value = `Punto seleccionado (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-    }
-  } catch (err) {
-    inputDestino.value = `Punto seleccionado`;
-  }
-}
-
-// 3. Cálculo de Distancia y Tarifa Dinámica por Kilómetro
+// Cálculo de Distancia y Tarifa Dinámica por Kilómetro
 async function calcularTarifaViaje() {
   if (!coordsOrigen || !coordsDestino) return;
 
@@ -196,4 +198,15 @@ async function calcularTarifaViaje() {
   } catch (err) {
     console.error("Error al calcular la ruta:", err);
   }
+}
+
+// Función auxiliar de distancia en línea recta
+function calcularDistanciaLineal(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
 }
