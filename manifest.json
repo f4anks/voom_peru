@@ -1,6 +1,6 @@
 {
-  "name": "Voladitos - App de Movilidad",
-  "short_name": "Voladitos",
+  "name": "Voom - App de Movilidad",
+  "short_name": "Voom",
   "description": "Tu plataforma de transporte rápido y seguro.",
   "start_url": "./index.html",
   "display": "standalone",
