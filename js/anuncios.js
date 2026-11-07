@@ -1,6 +1,5 @@
-// js/anuncios.js - Módulo unificado para Anuncios Globales en Voom
+// js/anuncios.js - Módulo unificado para Anuncios Globales con Tiempo Real
 
-// Obtener o inicializar cliente de Supabase
 function obtenerClienteSupabase() {
   if (typeof supabaseClient !== 'undefined' && supabaseClient) {
     return supabaseClient;
@@ -14,7 +13,7 @@ function obtenerClienteSupabase() {
   return null;
 }
 
-// 1. Función para el Admin: Transmitir Anuncio
+// 1. Transmitir Anuncio (Admin)
 async function enviarAnuncioGlobal() {
   const client = obtenerClienteSupabase();
   const elTitulo = document.getElementById('anuncio-titulo');
@@ -71,7 +70,20 @@ async function enviarAnuncioGlobal() {
   }
 }
 
-// 2. Función para Clientes (Pasajero / Conductor): Verificar y mostrar anuncio
+// 2. Mostrar Modal visualmente
+function desplegarModalAnuncio(titulo, mensaje) {
+  const modal = document.getElementById('modal-anuncio');
+  const tituloEl = document.getElementById('anuncio-modal-titulo');
+  const mensajeEl = document.getElementById('anuncio-modal-mensaje');
+
+  if (modal && tituloEl && mensajeEl) {
+    tituloEl.textContent = titulo || "Comunicado Oficial";
+    mensajeEl.textContent = mensaje || "";
+    modal.classList.remove('hidden');
+  }
+}
+
+// 3. Verificar al cargar la página + Escuchar en tiempo real
 async function verificarAnunciosGlobales(tipoRol = 'pasajero') {
   try {
     const client = obtenerClienteSupabase();
@@ -85,6 +97,7 @@ async function verificarAnunciosGlobales(tipoRol = 'pasajero') {
       ? 'voom_ultimo_anuncio_id_conductor' 
       : 'voom_ultimo_anuncio_id_pasajero';
 
+    // A. Revisar último anuncio al iniciar
     const { data, error } = await client
       .from('anuncios')
       .select('*')
@@ -92,36 +105,44 @@ async function verificarAnunciosGlobales(tipoRol = 'pasajero') {
       .order('created_at', { ascending: false })
       .limit(1);
 
-    if (error || !data || data.length === 0) return;
+    if (!error && data && data.length > 0) {
+      const ultimoAnuncio = data[0];
+      const ultimoVistoId = localStorage.getItem(keyStorage);
 
-    const ultimoAnuncio = data[0];
-    const ultimoVistoId = localStorage.getItem(keyStorage);
-
-    if (String(ultimoVistoId) !== String(ultimoAnuncio.id)) {
-      const modal = document.getElementById('modal-anuncio');
-      const tituloEl = document.getElementById('anuncio-modal-titulo');
-      const mensajeEl = document.getElementById('anuncio-modal-mensaje');
-
-      if (modal && tituloEl && mensajeEl) {
-        tituloEl.textContent = ultimoAnuncio.titulo || "Comunicado Oficial";
-        mensajeEl.textContent = ultimoAnuncio.mensaje || "";
-        
-        modal.classList.remove('hidden');
+      if (String(ultimoVistoId) !== String(ultimoAnuncio.id)) {
+        desplegarModalAnuncio(ultimoAnuncio.titulo, ultimoAnuncio.mensaje);
         localStorage.setItem(keyStorage, ultimoAnuncio.id);
       }
     }
+
+    // B. Escuchar en TIEMPO REAL (sin refrescar)
+    client
+      .channel('cambios-anuncios-globales')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'anuncios' },
+        (payload) => {
+          const nuevoAnuncio = payload.new;
+          if (rolesPermitidos.includes(nuevoAnuncio.destinatario)) {
+            desplegarModalAnuncio(nuevoAnuncio.titulo, nuevoAnuncio.mensaje);
+            localStorage.setItem(keyStorage, nuevoAnuncio.id);
+          }
+        }
+      )
+      .subscribe();
+
   } catch (err) {
-    console.error(`Error al obtener anuncios en ${tipoRol}:`, err);
+    console.error(`Error en anuncios en tiempo real (${tipoRol}):`, err);
   }
 }
 
-// 3. Cerrar el Modal
+// 4. Cerrar el Modal
 function cerrarModalAnuncio() {
   const modal = document.getElementById('modal-anuncio');
   if (modal) modal.classList.add('hidden');
 }
 
-// Exponer funciones al scope global
+// Exponer funciones globalmente
 window.enviarAnuncioGlobal = enviarAnuncioGlobal;
 window.verificarAnunciosGlobales = verificarAnunciosGlobales;
 window.cerrarModalAnuncio = cerrarModalAnuncio;
