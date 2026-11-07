@@ -53,18 +53,68 @@ async function cargarNombreUsuario() {
   userNameEl.textContent = "Pasajero";
 }
 
-// Configurar buscador de texto para el Punto B
+// Inicializar buscador avanzado con sugerencias en tiempo real
 function inicializarBuscadorDestino() {
   const inputDestino = document.getElementById('destino-txt');
-  if (!inputDestino) return;
+  const contenedorSugerencias = document.getElementById('sugerencias-destino');
+  
+  if (!inputDestino || !contenedorSugerencias) return;
 
-  inputDestino.addEventListener('keypress', async (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const query = inputDestino.value.trim();
-      if (query.length > 2) {
-        await buscarDestinoPorTexto(query);
+  let timeoutId;
+
+  inputDestino.addEventListener('input', (e) => {
+    clearTimeout(timeoutId);
+    const query = e.target.value.trim();
+
+    if (query.length < 3) {
+      contenedorSugerencias.classList.add('hidden');
+      contenedorSugerencias.innerHTML = '';
+      return;
+    }
+
+    // Esperar a que el usuario termine de escribir (debounce de 400ms)
+    timeoutId = setTimeout(async () => {
+      try {
+        // Consultar Nominatim acotando la búsqueda a la región/país (puedes ajustar viewbox o countrycodes según tu país)
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        contenedorSugerencias.innerHTML = '';
+
+        if (data && data.length > 0) {
+          data.forEach(lugar => {
+            const item = document.createElement('div');
+            item.className = "px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-orange-50 hover:text-orange-600 cursor-pointer border-b border-slate-100 last:border-none truncate";
+            item.textContent = lugar.display_name;
+
+            // Al hacer clic en una sugerencia de la lista
+            item.addEventListener('click', async () => {
+              inputDestino.value = lugar.display_name.split(',')[0]; // Mostrar nombre corto en el input
+              contenedorSugerencias.classList.add('hidden');
+              
+              const lat = parseFloat(lugar.lat);
+              const lng = parseFloat(lugar.lon);
+              
+              await establecerPuntoDestino(lat, lng, lugar.display_name);
+            });
+
+            contenedorSugerencias.appendChild(item);
+          });
+          contenedorSugerencias.classList.remove('hidden');
+        } else {
+          contenedorSugerencias.classList.add('hidden');
+        }
+      } catch (err) {
+        console.error("Error buscando sugerencias:", err);
       }
+    }, 400);
+  });
+
+  // Ocultar sugerencias si se hace clic fuera del input
+  document.addEventListener('click', (e) => {
+    if (!inputDestino.contains(e.target) && !contenedorSugerencias.contains(e.target)) {
+      contenedorSugerencias.classList.add('hidden');
     }
   });
 }
