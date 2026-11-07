@@ -159,7 +159,7 @@
 
   <script src="./js/index.js"></script>
   <script>
-    // Función global para alternar entre ver y ocultar contraseña
+    // Función para alternar visibilidad de contraseña
     function togglePassword(idInput, idIcon) {
       const input = document.getElementById(idInput);
       const icon = document.getElementById(idIcon);
@@ -167,19 +167,14 @@
 
       if (input.type === 'password') {
         input.type = 'text';
-        icon.innerHTML = `
-          <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.05 10.05 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18"/>
-        `;
+        icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.05 10.05 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18"/>`;
       } else {
         input.type = 'password';
-        icon.innerHTML = `
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-        `;
+        icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />`;
       }
     }
 
-    window.deferredPrompt = null;
+    let deferredPrompt = null;
 
     const overlay = document.getElementById('pwa-install-overlay');
     const appContent = document.getElementById('app-content');
@@ -204,40 +199,46 @@
 
     window.addEventListener('DOMContentLoaded', checkPWAState);
 
+    // Capturar el evento de instalación del navegador
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
-      window.deferredPrompt = e;
-      console.log('✅ Sistema listo para crear acceso directo / PWA');
+      deferredPrompt = e;
+      console.log('✅ Evento beforeinstallprompt capturado con éxito.');
     });
 
+    // Acción de instalación directa al hacer clic en el botón
     if (btnInstall) {
       btnInstall.addEventListener('click', async () => {
-        if (window.deferredPrompt) {
-          window.deferredPrompt.prompt();
-          const { outcome } = await window.deferredPrompt.userChoice;
+        // Si el navegador ya tiene listo el evento de instalación nativa
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          console.log('Resultado del usuario:', outcome);
+          
           if (outcome === 'accepted') {
             if (overlay) overlay.classList.add('hidden');
             if (appContent) appContent.classList.remove('hidden');
           }
-          window.deferredPrompt = null;
+          deferredPrompt = null;
           return;
         }
 
+        // Si es dispositivo iOS (iPhone/iPad)
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         if (isIOS) {
           if (iosInstructions) iosInstructions.classList.remove('hidden');
           return;
         }
 
-        // Mostrar instrucciones visuales en vez de un alert()
+        // Si el evento aún no se dispara (común en PC al refrescar), forzamos un intento de recarga o aviso amigable sin alert()
         let msgBox = document.getElementById('install-msg-box');
         if (!msgBox) {
           msgBox = document.createElement('div');
           msgBox.id = 'install-msg-box';
-          msgBox.className = 'mt-3 p-3 bg-orange-50 border border-orange-200 rounded-2xl text-[11px] font-bold text-orange-800 text-center animate-fade-in';
+          msgBox.className = 'mt-3 p-3 bg-amber-50 border border-amber-200 rounded-2xl text-[11px] font-bold text-amber-800 text-center';
           btnInstall.insertAdjacentElement('afterend', msgBox);
         }
-        msgBox.innerHTML = "💡 Toca el botón de instalación en la barra de direcciones de tu navegador (arriba a la derecha) o los tres puntos (⋮) para instalar Voom.";
+        msgBox.innerHTML = "⚠️ El navegador está preparando el acceso directo. Vuelve a hacer clic en el botón en unos segundos o usa el menú de opciones (⋮) de tu navegador.";
       });
     }
 
@@ -247,13 +248,10 @@
       });
     }
 
+    // Protecciones
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.addEventListener('keydown', e => {
-      if (
-        e.key === 'F12' || 
-        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || 
-        (e.ctrlKey && e.key === 'U')
-      ) {
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || (e.ctrlKey && e.key === 'U')) {
         e.preventDefault();
       }
     });
