@@ -23,17 +23,19 @@ document.addEventListener('DOMContentLoaded', () => {
   inicializarBuscadorDestino();
 });
 
-// Cargar Nombre del Usuario con lectura prioritaria
+// Cargar Nombre del Usuario con lectura prioritaria y formato exacto
 async function cargarNombreUsuario() {
   const userNameEl = document.getElementById('user-name');
   if (!userNameEl) return;
 
+  // 1. Intentar leer primero desde localStorage (guardado al iniciar sesión o registrarse)
   const nombreLocal = localStorage.getItem('voom_user_name');
   if (nombreLocal && nombreLocal.trim() !== '') {
     userNameEl.textContent = nombreLocal;
     return;
   }
 
+  // 2. Si no está en localStorage, intentar consultarlo directamente desde la sesión activa de Supabase
   try {
     if (typeof supabaseClient !== 'undefined') {
       const { data: { session } } = await supabaseClient.auth.getSession();
@@ -50,6 +52,7 @@ async function cargarNombreUsuario() {
     console.error("Error consultando sesión:", err);
   }
 
+  // 3. Respaldo por defecto
   userNameEl.textContent = "Pasajero";
 }
 
@@ -75,7 +78,6 @@ function inicializarBuscadorDestino() {
     // Esperar a que el usuario termine de escribir (debounce de 400ms)
     timeoutId = setTimeout(async () => {
       try {
-        // Consultar Nominatim acotando la búsqueda a la región/país (puedes ajustar viewbox o countrycodes según tu país)
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
         const response = await fetch(url);
         const data = await response.json();
