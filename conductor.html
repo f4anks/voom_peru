@@ -18,6 +18,9 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
+  <!-- SDK DE ONESIGNAL WEB PUSH -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+
   <style>
     body { 
       font-family: 'Plus Jakarta Sans', sans-serif; 
@@ -98,11 +101,29 @@
   <script src="js/conductor.js"></script>
   
   <script>
-    // Inicializar verificación de anuncios para conductores al cargar la página
+    // Inicializar verificación de anuncios y OneSignal al cargar la página
     window.addEventListener('DOMContentLoaded', () => {
       if (typeof verificarAnunciosGlobales === 'function') {
         verificarAnunciosGlobales('conductor');
       }
+
+      // Inicializar OneSignal para notificaciones push en segundo plano
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "TU_ONESIGNAL_APP_ID", // Reemplaza por tu App ID real de OneSignal
+          safari_web_id: "",
+          notifyButton: { enable: false },
+        });
+
+        // Asignar etiqueta 'Conductores' para segmentar envíos desde el admin
+        await OneSignal.User.addTag("rol", "conductores");
+
+        // Solicitar permisos de notificación Push de forma interactiva
+        if (!OneSignal.User.PushSubscription.optedIn) {
+          OneSignal.Slidedown.promptPush();
+        }
+      });
     });
 
     if ('serviceWorker' in navigator) {
