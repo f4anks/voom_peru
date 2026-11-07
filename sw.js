@@ -1,28 +1,28 @@
-const CACHE_NAME = 'voladitos-v1';
-const assetsToCache = [
+const CACHE_NAME = 'voom-cache-v2'; // Al cambiar v1 a v2 se borra la caché vieja del teléfono automáticamente
+const urlsToCache = [
+  './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './js/pasajero.js',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
 ];
 
-// Instalación del Service Worker
-self.addEventListener('install', (event) => {
+// Instalación y activación inmediata
+self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(assetsToCache);
-      })
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
 });
 
-// Activación y limpieza de cachés antiguas
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
+        cacheNames.map(cache => {
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache); // Elimina mapas y scripts antiguos
           }
         })
       );
@@ -30,12 +30,9 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// CRÍTICO: El evento fetch es obligatorio para que Chrome permita instalar la PWA
-self.addEventListener('fetch', (event) => {
+// Estrategia Network First (Prioriza siempre descargar de GitHub antes de consultar caché local)
+self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        return response || fetch(event.request);
-      })
+    fetch(event.request).catch(() => caches.match(event.request))
   );
 });
