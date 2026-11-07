@@ -3,11 +3,23 @@ const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
 const SUPABASE_KEY = 'tu-anon-key';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // 1. VALIDACIÓN DE SEGURIDAD: Bloquear si se ejecuta en navegador web normal
   if (!verificarModoStandalone()) {
     bloquearAccesoWeb();
-    return; // Detiene la ejecución de todo el script
+    return;
+  }
+
+  // 2. SESIÓN PERSISTENTE: Si ya hay una sesión activa, entrar directo a la app
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session && session.user) {
+      const role = session.user.user_metadata?.role || 'pasajero';
+      window.location.href = role === 'conductor' ? 'conductor.html' : 'pasajero.html';
+      return;
+    }
+  } catch (err) {
+    console.error("Error al verificar sesión guardada:", err);
   }
 
   const btnTabLogin = document.getElementById('btn-tab-login');
@@ -133,13 +145,12 @@ function bloquearAccesoWeb() {
   const installOverlay = document.getElementById('pwa-install-overlay');
 
   if (appContent) {
-    appContent.classList.add('hidden'); // Ocultar formularios de login/registro
+    appContent.classList.add('hidden');
   }
 
   if (installOverlay) {
-    installOverlay.classList.remove('hidden'); // Mantener visible el aviso de instalación
+    installOverlay.classList.remove('hidden');
 
-    // Modificar el texto del cuadro para explicar que la web está restringida
     const cajaModal = installOverlay.querySelector('.max-w-sm');
     if (cajaModal) {
       cajaModal.innerHTML = `
@@ -159,7 +170,6 @@ function bloquearAccesoWeb() {
         </button>
       `;
 
-      // Reactivar el botón de instalación dentro del modal bloqueado
       setTimeout(() => {
         const btnForced = document.getElementById('btn-pwa-install-forced');
         if (btnForced) {
