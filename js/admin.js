@@ -44,16 +44,20 @@ async function cargarConductores() {
 }
 
 function actualizarContadores() {
-  document.getElementById('count-todos').innerText = todosLosConductores.length;
-  document.getElementById('count-pendiente').innerText = todosLosConductores.filter(c => c.estado_cuenta === 'pendiente').length;
-  document.getElementById('count-aprobado').innerText = todosLosConductores.filter(c => c.estado_cuenta === 'aprobado').length;
-  document.getElementById('count-suspendido').innerText = todosLosConductores.filter(c => c.estado_cuenta === 'suspendido').length;
+  const elTodos = document.getElementById('count-todos');
+  const elPendiente = document.getElementById('count-pendiente');
+  const elAprobado = document.getElementById('count-aprobado');
+  const elSuspendido = document.getElementById('count-suspendido');
+
+  if (elTodos) elTodos.innerText = todosLosConductores.length;
+  if (elPendiente) elPendiente.innerText = todosLosConductores.filter(c => c.estado_cuenta === 'pendiente').length;
+  if (elAprobado) elAprobado.innerText = todosLosConductores.filter(c => c.estado_cuenta === 'aprobado').length;
+  if (elSuspendido) elSuspendido.innerText = todosLosConductores.filter(c => c.estado_cuenta === 'suspendido').length;
 }
 
 function filtrarConductores(tipo) {
   filtroActual = tipo;
 
-  // Estilos de pestañas
   ['todos', 'pendiente', 'aprobado', 'suspendido'].forEach(tab => {
     const btn = document.getElementById(`tab-${tab}`);
     if (btn) {
@@ -70,6 +74,7 @@ function filtrarConductores(tipo) {
 
 function renderizarConductores() {
   const contenedor = document.getElementById('contenedor-conductores');
+  if (!contenedor) return;
   contenedor.innerHTML = '';
 
   let lista = todosLosConductores;
@@ -154,8 +159,11 @@ function verDocumentos(idConductor) {
   const conductor = todosLosConductores.find(c => c.id === idConductor);
   if (!conductor) return;
 
-  document.getElementById('modal-titulo-conductor').innerText = `Documentos: ${conductor.nombre_completo || 'Conductor'}`;
+  const elTitulo = document.getElementById('modal-titulo-conductor');
+  if (elTitulo) elTitulo.innerText = `Documentos: ${conductor.nombre_completo || 'Conductor'}`;
+  
   const cuerpo = document.getElementById('modal-cuerpo-docs');
+  if (!cuerpo) return;
 
   const docs = [
     { titulo: 'Cédula de Identidad', url: conductor.foto_cedula },
@@ -174,11 +182,62 @@ function verDocumentos(idConductor) {
     </div>
   `).join('');
 
-  document.getElementById('modal-docs').classList.remove('hidden');
+  const modal = document.getElementById('modal-docs');
+  if (modal) modal.classList.remove('hidden');
 }
 
 function cerrarModalDocs() {
-  document.getElementById('modal-docs').classList.add('hidden');
+  const modal = document.getElementById('modal-docs');
+  if (modal) modal.classList.add('hidden');
+}
+
+// Transmitir Anuncio Global
+async function enviarAnuncioGlobal() {
+  const elTitulo = document.getElementById('anuncio-titulo');
+  const elMensaje = document.getElementById('anuncio-mensaje');
+  const elStatus = document.getElementById('anuncio-status');
+
+  if (!elTitulo || !elMensaje) return;
+
+  const titulo = elTitulo.value.trim();
+  const mensaje = elMensaje.value.trim();
+
+  if (!titulo || !mensaje) {
+    alert("Por favor completa el título y el mensaje del anuncio.");
+    return;
+  }
+
+  if (elStatus) {
+    elStatus.textContent = "Transmitiendo anuncio...";
+    elStatus.className = "text-xs font-bold text-orange-600";
+  }
+
+  try {
+    const { error } = await supabaseClient
+      .from('anuncios')
+      .insert([{ titulo: titulo, mensaje: mensaje, created_at: new Date() }]);
+
+    if (error) throw error;
+
+    if (elStatus) {
+      elStatus.textContent = "¡Anuncio enviado exitosamente a toda la red Voom! 🚀";
+      elStatus.className = "text-xs font-bold text-emerald-600";
+    }
+
+    elTitulo.value = '';
+    elMensaje.value = '';
+
+    setTimeout(() => {
+      if (elStatus) elStatus.textContent = '';
+    }, 4000);
+
+  } catch (err) {
+    console.error("Error al enviar anuncio:", err);
+    if (elStatus) {
+      elStatus.textContent = "Error al enviar: " + err.message;
+      elStatus.className = "text-xs font-bold text-red-600";
+    }
+  }
 }
 
 async function logoutAdmin() {
@@ -187,3 +246,11 @@ async function logoutAdmin() {
   }
   window.location.href = 'index.html';
 }
+
+// Exponer las funciones globalmente para evitar fallos con los atributos onclick de HTML
+window.enviarAnuncioGlobal = enviarAnuncioGlobal;
+window.filtrarConductores = filtrarConductores;
+window.cambiarEstadoConductor = cambiarEstadoConductor;
+window.verDocumentos = verDocumentos;
+window.cerrarModalDocs = cerrarModalDocs;
+window.logoutAdmin = logoutAdmin;
