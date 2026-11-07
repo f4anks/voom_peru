@@ -72,7 +72,7 @@
         </svg>
       </div>
       <h1 class="text-3xl font-black text-slate-900 tracking-tight">Voom</h1>
-      <p class="text-[11px] font-bold text-orange-600 uppercase tracking-widest mt-1">Rapido, Confiable y Seguro</p>
+      <p class="text-[11px] font-bold text-orange-600 uppercase tracking-widest mt-1">Rápido, Confiable y Seguro</p>
     </div>
 
     <div class="flex bg-slate-100 p-1.5 rounded-2xl mb-6 border border-slate-200/80">
@@ -141,7 +141,7 @@
 
   </div>
 
- <script src="./js/index.js"></script>
+  <script src="./js/index.js"></script>
   <script>
     // Variable global para capturar la orden nativa del navegador
     window.deferredPrompt = null;
@@ -206,10 +206,10 @@
       });
     }
 
-    // 4. Registrar Service Worker obligatorio
+    // 4. Registrar Service Worker obligatorio con ámbito explícito
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
+        navigator.serviceWorker.register('./sw.js', { scope: './' })
           .then(reg => console.log('SW activo:', reg.scope))
           .catch(err => console.error('SW Error:', err));
       });
