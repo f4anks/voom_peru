@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Voladitos - Pedir Viaje</title>
+  <title>Voom - Pedir Viaje</title>
 
   <!-- Metadatos PWA -->
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#f8fafc">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Voladitos">
+  <meta name="apple-mobile-web-app-title" content="Voom">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -32,13 +32,17 @@
         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
       </div>
       <div>
-        <span class="text-lg font-black text-slate-900 tracking-tight leading-tight block">Voladitos</span>
+        <span class="text-lg font-black text-slate-900 tracking-tight leading-tight block">Voom</span>
         <span class="text-[10px] text-orange-600 font-extrabold uppercase tracking-wider">Pasajero</span>
       </div>
     </div>
 
     <div class="flex items-center space-x-4">
-      <span id="user-name" class="hidden sm:inline text-xs font-bold text-slate-600">Cargando...</span>
+      <!-- Nombre de usuario ubicado arriba de la acción o integrado de forma destacada -->
+      <div class="flex flex-col text-right">
+        <span id="user-name" class="text-xs font-black text-slate-800 leading-tight">Cargando...</span>
+        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Sesión Activa</span>
+      </div>
       <button onclick="logout()" class="text-xs bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 font-bold px-4 py-2.5 rounded-xl transition-all border border-slate-200">
         Cerrar Sesión
       </button>
