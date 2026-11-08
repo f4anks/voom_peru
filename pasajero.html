@@ -147,8 +147,9 @@
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       window.OneSignalDeferred.push(async function(OneSignal) {
         await OneSignal.init({
-          appId: "98bfb199-5190-4c51-93b0-2cffb11c79e7", // App ID real de tu app en OneSignal
-          safari_web_id: "",
+          appId: "98bfb199-5190-4c51-93b0-2cffb11c79e7",
+          serviceWorkerPath: "OneSignalSDKWorker.js",
+          serviceWorkerParam: { scope: "/voom_peru/" },
           notifyButton: { enable: false },
         });
 
