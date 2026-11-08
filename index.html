@@ -24,7 +24,7 @@
       await OneSignal.init({
         appId: "98bfb199-5190-4c51-93b0-2cffb11c79e7",
         notifyButton: {
-          enable: true, // Muestra el botón flotante en pantalla para suscribirse
+          enable: true,
         },
       });
     });
@@ -123,7 +123,7 @@
       </button>
     </form>
 
-    <!-- Formulario Registro -->
+    <!-- Formulario Registro (Limpio, sin selector de rol previo) -->
     <form id="form-register" class="space-y-4 hidden">
       <div>
         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nombre Completo</label>
@@ -145,20 +145,6 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
           </button>
-        </div>
-      </div>
-
-      <div>
-        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Selecciona tu perfil</label>
-        <div class="grid grid-cols-2 gap-3">
-          <label class="relative flex items-center justify-center p-3.5 border-2 border-slate-200 bg-slate-50 rounded-2xl cursor-pointer hover:border-orange-500 has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50/60 transition-all">
-            <input type="radio" name="role" value="pasajero" checked class="sr-only" />
-            <span class="text-xs font-extrabold text-slate-800">Pasajero</span>
-          </label>
-          <label class="relative flex items-center justify-center p-3.5 border-2 border-slate-200 bg-slate-50 rounded-2xl cursor-pointer hover:border-orange-500 has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50/60 transition-all">
-            <input type="radio" name="role" value="conductor" class="sr-only" />
-            <span class="text-xs font-extrabold text-slate-800">Conductor</span>
-          </label>
         </div>
       </div>
 
@@ -217,7 +203,6 @@
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
-      console.log('✅ Evento beforeinstallprompt listo.');
     });
 
     // Acción del botón de instalación dentro del modal de acceso restringido
