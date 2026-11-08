@@ -112,38 +112,35 @@
         try {
           mostrarMensaje("Verificando credenciales de conductor...", "info");
 
-          if (!supabaseClient) {
-            throw new Error("Cliente de Supabase no inicializado.");
-          }
-
           const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
           if (authError || !user) {
             window.location.href = 'index.html';
             return;
           }
 
-          // Creamos una promesa con timeout de 5 segundos para evitar que se quede congelado
-          const promesaConsulta = supabaseClient
+          // Consulta con control de tiempo límite (Timeout de 4 segundos)
+          const consultaPerfil = supabaseClient
             .from('perfiles')
             .select('estado_cuenta')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
 
           const timeoutSupabase = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout de Supabase')), 5000)
+            setTimeout(() => reject(new Error('Timeout')), 4000)
           );
 
           let resultado;
           try {
-            resultado = await Promise.race([promesaConsulta, timeoutSupabase]);
+            resultado = await Promise.race([consultaPerfil, timeoutSupabase]);
           } catch (timeoutErr) {
-            console.warn("La consulta tardó mucho o falló, redirigiendo por seguridad a registro de conductor.");
+            // Si la base de datos tarda o no responde, lo enviamos al registro de conductor por seguridad
             window.location.href = 'registro_cond.html';
             return;
           }
 
           const { data, error } = resultado;
 
+          // Si no hay perfil registrado aún, o está pendiente, va a registro de conductor
           if (error || !data || data.estado_cuenta === 'pendiente' || !data.estado_cuenta) {
             window.location.href = 'registro_cond.html';
           } else if (data.estado_cuenta === 'aprobado') {
