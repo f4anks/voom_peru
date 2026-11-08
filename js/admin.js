@@ -180,14 +180,11 @@ function verDocumentos(idConductor) {
   cuerpo.innerHTML = docs.map(d => `
     <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center">
       <p class="text-xs font-bold text-slate-700 mb-2">${d.titulo}</p>
-      {d.url 
+      ${d.url 
         ? `<a href="${d.url}" target="_blank"><img src="${d.url}" class="w-full h-36 object-cover rounded-xl border border-slate-200 hover:opacity-90 transition-all" alt="${d.titulo}" /></a>` 
         : '<div class="h-36 flex items-center justify-center bg-slate-100 text-xs text-slate-400 font-medium rounded-xl">Sin fotografía cargada</div>'}
     </div>
-  `.replace('{d.url', '${d.url')).join(''); // Limpieza segura de template literal
-
-  const modal = document.getElementById('modal-docs');
-  if (modal) modal.classList.remove('hidden');
+  `).join('');
 }
 
 function cerrarModalDocs() {
