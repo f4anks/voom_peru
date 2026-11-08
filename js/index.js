@@ -1,4 +1,3 @@
-// Inicialización del cliente Supabase con tus credenciales reales
 const SUPABASE_URL = 'https://gklquvthucityzgcamao.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -10,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // 2. SESIÓN PERSISTENTE: Si ya hay una sesión activa, entrar directo al selector sin pedir clave
+  // 2. SESIÓN PERSISTENTE: Si ya hay una sesión activa, entrar directo al selector
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session && session.user) {
@@ -126,19 +125,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Función para redirigir a la pantalla de selección central
 function redirigirAlSelector() {
   window.location.href = 'selector.html';
 }
 
-// Función para comprobar si la PWA se abrió instalada
 function verificarModoStandalone() {
   return (window.matchMedia('(display-mode: standalone)').matches) || 
          (window.navigator.standalone === true) || 
          document.referrer.includes('android-app://');
 }
 
-// Función que bloquea la pantalla si se abre en el navegador web
 function bloquearAccesoWeb() {
   const appContent = document.getElementById('app-content');
   const installOverlay = document.getElementById('pwa-install-overlay');
