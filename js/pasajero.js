@@ -168,6 +168,7 @@ function inicializarBuscadorDestinoPeru() {
             item.textContent = lugar.display_name + distanciaInfo;
 
             item.addEventListener('click', async () => {
+              inputOrigenValue = lugar.display_name.split(',')[0]; 
               inputDestino.value = lugar.display_name.split(',')[0]; 
               contenedorSugerencias.classList.add('hidden');
               
@@ -231,46 +232,19 @@ async function establecerPuntoDestino(lat, lng, nombrePersonalizado = null) {
   calcularTarifaViaje();
 }
 
-// 📡 OBTENER GEOLOCALIZACIÓN AUTOMÁTICA DEL USUARIO
+// 📡 OBTENER GEOLOCALIZACIÓN (MODO PRUEBAS LIMA)
 function obtenerUbicacionUsuario() {
   const inputOrigen = document.getElementById('origen-txt');
 
-  if (!navigator.geolocation) {
-    if (inputOrigen) inputOrigen.placeholder = "Punto de origen manual...";
-    return;
-  }
+  // 🧪 COORDENADAS FIJAS DE LIMA PARA PRUEBAS
+  const lat = -12.0464; 
+  const lng = -77.0428;
+  coordsOrigen = { lat, lng };
 
-  if (inputOrigen) inputOrigen.value = "Obteniendo tu ubicación...";
+  if (inputOrigen) inputOrigen.value = "Cercado de Lima, Perú";
 
-  navigator.geolocation.getCurrentPosition(
-    async (position) => {
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
-      coordsOrigen = { lat, lng };
-
-      centrarMapa(lat, lng, 16);
-      actualizarMarcadorOrigen(lat, lng);
-
-      try {
-        const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=es`;
-        const response = await fetch(url);
-        const data = await response.json();
-        if (inputOrigen) {
-          inputOrigen.value = `${data.locality || ''}${data.countryName ? ', ' + data.countryName : ''}`;
-        }
-      } catch (err) {
-        if (inputOrigen) inputOrigen.value = `Ubicación actual (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-      }
-    },
-    (error) => {
-      // Si se deniega el GPS, permitimos escribir manualmente sin bloquear la pantalla
-      if (inputOrigen) {
-        inputOrigen.value = "";
-        inputOrigen.placeholder = "Ingresa origen manualmente...";
-      }
-    },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-  );
+  centrarMapa(lat, lng, 15);
+  actualizarMarcadorOrigen(lat, lng);
 }
 
 // 💵 CÁLCULO DE TARIFA Y RUTA
