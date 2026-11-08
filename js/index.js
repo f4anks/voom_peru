@@ -10,12 +10,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // 2. SESIÓN PERSISTENTE: Si ya hay una sesión activa, entrar directo a la app sin pedir clave
+  // 2. SESIÓN PERSISTENTE: Si ya hay una sesión activa, entrar directo sin pedir clave
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session && session.user) {
       const role = session.user.user_metadata?.role || 'pasajero';
-      window.location.href = role === 'conductor' ? 'conductor.html' : 'pasajero_pe.html';
+      redirigirSegunRol(role, session.user.id);
       return;
     }
   } catch (err) {
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const formRegister = document.getElementById('form-register');
   const statusMsg = document.getElementById('status-message');
 
-  // Alternar entre Login y Registro
+  // Alternar entre pestañas de Login y Registro
   if (btnTabLogin && btnTabRegister) {
     btnTabLogin.addEventListener('click', () => {
       formLogin.classList.remove('hidden');
@@ -62,13 +62,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (error) throw error;
 
+        const role = data.user.user_metadata?.role || 'pasajero';
         const nombreUsuario = data.user.user_metadata?.full_name || email.split('@')[0];
         localStorage.setItem('voom_user_name', nombreUsuario);
 
-        mostrarMensaje("¡Bienvenido a Voom Perú!", "éxito");
+        mostrarMensaje("¡Bienvenido a Voom!", "éxito");
 
         setTimeout(() => {
-          window.location.href = 'pasajero_pe.html';
+          redirigirSegunRol(role, data.user.id);
         }, 1000);
 
       } catch (err) {
@@ -100,15 +101,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (error) throw error;
 
         localStorage.setItem('voom_user_name', name);
-
         mostrarMensaje("Cuenta creada exitosamente.", "éxito");
 
         setTimeout(() => {
-          if (role === 'conductor') {
-            window.location.href = 'conductor.html';
-          } else {
-            window.location.href = 'pasajero_pe.html';
-          }
+          redirigirSegunRol(role, data.user.id);
         }, 1000);
 
       } catch (err) {
@@ -132,6 +128,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
+// Función de redirección inteligente según el rol del usuario
+async function redirigirSegunRol(role, userId) {
+  if (role === 'conductor') {
+    // Verificar si el conductor ya subió sus documentos y está aprobado/pendiente
+    const { data, error } = await supabaseClient
+      .from('perfiles')
+      .select('estado_cuenta')
+      .eq('id', userId)
+      .single();
+
+    // Si no ha llenado sus datos de conductor o está pendiente, mandarlo al registro de documentos
+    if (error || !data || data.estado_cuenta === 'pendiente' || !data.estado_cuenta) {
+      window.location.href = 'registro_conductor.html';
+    } else {
+      window.location.href = 'conductor.html';
+    }
+  } else {
+    // Si es pasajero, directo a su mapa
+    window.location.href = 'pasajero_pe.html';
+  }
+}
+
 // Función para comprobar si la PWA se abrió instalada
 function verificarModoStandalone() {
   return (window.matchMedia('(display-mode: standalone)').matches) || 
@@ -144,9 +162,7 @@ function bloquearAccesoWeb() {
   const appContent = document.getElementById('app-content');
   const installOverlay = document.getElementById('pwa-install-overlay');
 
-  if (appContent) {
-    appContent.classList.add('hidden');
-  }
+  if (appContent) appContent.classList.add('hidden');
 
   if (installOverlay) {
     installOverlay.classList.remove('hidden');
