@@ -13,7 +13,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Validar Sesión
+  // Validar Sesión de Administrador
   const { data: { user } } = await supabaseClient.auth.getUser();
   if (!user) {
     window.location.href = 'index.html';
@@ -50,7 +50,7 @@ function actualizarContadores() {
   const elSuspendido = document.getElementById('count-suspendido');
 
   if (elTodos) elTodos.innerText = todosLosConductores.length;
-  if (elPendiente) elPendiente.innerText = todosLosConductores.filter(c => c.estado_cuenta === 'pendiente').length;
+  if (elPendiente) elPendiente.innerText = todosLosConductores.filter(c => c.estado_cuenta === 'pendiente' || !c.estado_cuenta).length;
   if (elAprobado) elAprobado.innerText = todosLosConductores.filter(c => c.estado_cuenta === 'aprobado').length;
   if (elSuspendido) elSuspendido.innerText = todosLosConductores.filter(c => c.estado_cuenta === 'suspendido').length;
 }
@@ -79,7 +79,11 @@ function renderizarConductores() {
 
   let lista = todosLosConductores;
   if (filtroActual !== 'todos') {
-    lista = todosLosConductores.filter(c => c.estado_cuenta === filtroActual);
+    if (filtroActual === 'pendiente') {
+      lista = todosLosConductores.filter(c => c.estado_cuenta === 'pendiente' || !c.estado_cuenta);
+    } else {
+      lista = todosLosConductores.filter(c => c.estado_cuenta === filtroActual);
+    }
   }
 
   if (lista.length === 0) {
@@ -176,11 +180,11 @@ function verDocumentos(idConductor) {
   cuerpo.innerHTML = docs.map(d => `
     <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center">
       <p class="text-xs font-bold text-slate-700 mb-2">${d.titulo}</p>
-      ${d.url 
+      {d.url 
         ? `<a href="${d.url}" target="_blank"><img src="${d.url}" class="w-full h-36 object-cover rounded-xl border border-slate-200 hover:opacity-90 transition-all" alt="${d.titulo}" /></a>` 
         : '<div class="h-36 flex items-center justify-center bg-slate-100 text-xs text-slate-400 font-medium rounded-xl">Sin fotografía cargada</div>'}
     </div>
-  `).join('');
+  `.replace('{d.url', '${d.url')).join(''); // Limpieza segura de template literal
 
   const modal = document.getElementById('modal-docs');
   if (modal) modal.classList.remove('hidden');
@@ -198,7 +202,7 @@ async function logoutAdmin() {
   window.location.href = 'index.html';
 }
 
-// Exponer las funciones globalmente para el panel administrativo
+// Exponer las funciones globalmente
 window.filtrarConductores = filtrarConductores;
 window.cambiarEstadoConductor = cambiarEstadoConductor;
 window.verDocumentos = verDocumentos;
