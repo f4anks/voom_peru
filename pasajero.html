@@ -145,17 +145,19 @@
   <script src="./js/pasajero.js"></script>
 
   <script>
-    const SUPABASE_URL_CLIENT = "https://gklquvthucityzgcamao.supabase.co";
-    const SUPABASE_ANON_KEY_CLIENT = "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM";
-    let supabaseAppClient = null;
+    const SUPABASE_URL = "https://gklquvthucityzgcamao.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM";
+    
+    // Declarar como global con el nombre exacto que espera pasajero.js
+    let supabaseClient = null;
 
     window.addEventListener('DOMContentLoaded', () => {
-      // Inicializar cliente Supabase local para el realtime del pasajero
+      // Inicializar cliente Supabase global
       if (window.supabase && window.supabase.createClient) {
-        supabaseAppClient = window.supabase.createClient(SUPABASE_URL_CLIENT, SUPABASE_ANON_KEY_CLIENT);
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         // Activar escucha en tiempo real para nuevos anuncios
-        supabaseAppClient
+        supabaseClient
           .channel('pasajero-anuncios-rt')
           .on(
             'postgres_changes',
