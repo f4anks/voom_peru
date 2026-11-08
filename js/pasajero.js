@@ -288,3 +288,115 @@ function calcularDistanciaLineal(lat1, lon1, lat2, lon2) {
             Math.sin(dLon/2) * Math.sin(dLon/2);
   return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
 }
+
+// 🚀 CONFIRMAR Y CREAR LA SOLICITUD DE VIAJE
+async function solicitarViaje() {
+  // 1. Validaciones previas
+  if (!coordsOrigen || !coordsDestino) {
+    alert("Por favor selecciona un punto de origen y un destino válido.");
+    return;
+  }
+
+  const inputDestino = document.getElementById('destino-txt');
+  const direccionDestino = inputDestino ? inputDestino.value : "Destino seleccionado";
+  
+  const inputOrigen = document.getElementById('origen-txt');
+  const direccionOrigen = inputOrigen ? inputOrigen.value : "Origen actual";
+
+  const btnSolicitar = document.getElementById('btn-solicitar');
+  if (btnSolicitar) {
+    btnSolicitar.disabled = true;
+    btnSolicitar.textContent = "Procesando solicitud...";
+  }
+
+  try {
+    // 2. Obtener la sesión del usuario actual de Supabase
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      alert("Debes iniciar sesión para pedir un viaje.");
+      window.location.href = 'index.html';
+      return;
+    }
+
+    // 3. Calcular la tarifa final nuevamente para asegurar consistencia
+    const distanciaKm = calcularDistanciaLineal(coordsOrigen.lat, coordsOrigen.lng, coordsDestino.lat, coordsDestino.lng);
+    let precioFinal = CONFIG_TARIFA.precioBase + (distanciaKm * CONFIG_TARIFA.precioPorKm);
+    if (precioFinal < CONFIG_TARIFA.tarifaMinima) {
+      precioFinal = CONFIG_TARIFA.tarifaMinima;
+    }
+
+    // 4. Insertar el viaje en la tabla 'viajes' de Supabase
+    const { data: viajeCreado, error } = await supabaseClient
+      .from('viajes')
+      .insert([
+        {
+          pasajero_id: user.id,
+          origen_lat: coordsOrigen.lat,
+          origen_lng: coordsOrigen.lng,
+          origen_direccion: direccionOrigen,
+          destino_lat: coordsDestino.lat,
+          destino_lng: coordsDestino.lng,
+          destino_direccion: direccionDestino,
+          distancia_km: parseFloat(distanciaKm.toFixed(2)),
+          precio: parseFloat(precioFinal.toFixed(2)),
+          estado: 'buscando'
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // 5. Ocultar inputs y mostrar estatus de búsqueda al pasajero
+    document.querySelector('.space-y-3').classList.add('hidden'); // Ocultar formulario de búsqueda
+    
+    const estadoBox = document.getElementById('estado-viaje-box');
+    const estadoTexto = document.getElementById('estado-viaje-texto');
+    if (estadoBox && estadoTexto) {
+      estadoTexto.textContent = "Buscando un conductor cercano en Voom...";
+      estadoBox.classList.remove('hidden');
+    }
+
+    // 6. Activar escucha en tiempo real para este viaje específico
+    escucharEstadoViaje(viajeCreado.id);
+
+  } catch (err) {
+    console.error("Error al solicitar el viaje:", err);
+    alert("No se pudo procesar la solicitud: " + err.message);
+    if (btnSolicitar) {
+      btnSolicitar.disabled = false;
+      btnSolicitar.textContent = "Confirmar Solicitud 🚀";
+    }
+  }
+}
+
+// 📡 ESCUCHAR CAMBIOS EN TIEMPO REAL PARA EL PASAJERO
+function escucharEstadoViaje(viajeId) {
+  supabaseClient
+    .channel(`viaje-pasajero-${viajeId}`)
+    .on(
+      'postgres_changes',
+      { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'viajes', 
+        filter: `id=eq.${viajeId}` 
+      },
+      (payload) => {
+        const viajeActualizado = payload.new;
+        const estadoTexto = document.getElementById('estado-viaje-texto');
+
+        if (viajeActualizado.estado === 'aceptado') {
+          if (estadoTexto) {
+            estadoTexto.textContent = "¡Conductor asignado! Dirigiéndose a tu ubicación 🚗";
+          }
+          // Aquí más adelante cargaremos los datos del conductor y dibujaremos su ruta hacia el pasajero
+        } else if (viajeActualizado.estado === 'completado') {
+          if (estadoTexto) {
+            estadoTexto.textContent = "¡Has llegado a tu destino! Viaje finalizado 🎉";
+          }
+        }
+      }
+    )
+    .subscribe();
+}
