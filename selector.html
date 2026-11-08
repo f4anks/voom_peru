@@ -85,28 +85,28 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     document.addEventListener('DOMContentLoaded', async () => {
+      const greetingEl = document.getElementById('user-greeting');
+      
       try {
         const { data: { session }, error } = await supabaseClient.auth.getSession();
         if (error || !session) {
-          // Si no hay sesión activa, regresar al login principal
           window.location.href = 'index.html';
           return;
         }
 
         const user = session.user;
+        // Obtener el nombre de forma segura evitando bloqueos si no está en metadata
         const nombre = user.user_metadata?.full_name || localStorage.getItem('voom_user_name') || user.email.split('@')[0];
         
-        const greetingEl = document.getElementById('user-greeting');
         if (greetingEl) {
           greetingEl.textContent = `Hola, ${nombre}`;
         }
       } catch (err) {
         console.error("Error al validar sesión en selector:", err);
-        window.location.href = 'index.html';
+        if (greetingEl) greetingEl.textContent = `Hola, Conductor/Pasajero`;
       }
     });
 
-    // Lógica al hacer clic en un modo
     window.seleccionarModo = async function(modo) {
       if (modo === 'pasajero') {
         window.location.href = 'pasajero_pe.html';
@@ -119,14 +119,12 @@
           return;
         }
 
-        // Consultar estado en la tabla perfiles
         const { data, error } = await supabaseClient
           .from('perfiles')
           .select('estado_cuenta')
           .eq('id', user.id)
           .single();
 
-        // Si no ha registrado sus datos o está pendiente, enviarlo al formulario de documentos
         if (error || !data || data.estado_cuenta === 'pendiente' || !data.estado_cuenta) {
           window.location.href = 'registro_conductor.html';
         } else {
@@ -149,7 +147,6 @@
       statusMsg.classList.add('bg-slate-50', 'text-slate-600', 'border-slate-200');
     }
 
-    // Protecciones de interfaz
     document.addEventListener('contextmenu', e => e.preventDefault());
   </script>
 </body>
