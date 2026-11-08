@@ -123,11 +123,22 @@
       </button>
     </form>
 
-    <!-- Formulario Registro (Limpio, sin selector de rol previo) -->
+    <!-- Formulario Registro (Con DNI y Celular de Perú) -->
     <form id="form-register" class="space-y-4 hidden">
       <div>
         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nombre Completo</label>
         <input type="text" id="reg-name" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" placeholder="Ej. Carlos Mendoza" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">DNI</label>
+          <input type="text" id="reg-dni" required maxlength="8" pattern="[0-9]{8}" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" placeholder="8 dígitos" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Celular</label>
+          <input type="tel" id="reg-telefono" required maxlength="9" pattern="9[0-9]{8}" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" placeholder="9XXXXXXXX" />
+        </div>
       </div>
 
       <div>
