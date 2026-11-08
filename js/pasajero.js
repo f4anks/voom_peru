@@ -33,19 +33,16 @@ async function cargarNombreUsuario() {
   const userNameEl = document.getElementById('user-name');
   if (!userNameEl) return;
 
-  // 1. Intentar leer primero desde localStorage (guardado al iniciar sesión o registrarse)
   const nombreLocal = localStorage.getItem('voom_user_name');
   if (nombreLocal && nombreLocal.trim() !== '') {
     userNameEl.textContent = nombreLocal;
     return;
   }
 
-  // 2. Si no está en localStorage, intentar consultarlo directamente desde Supabase
   try {
     if (typeof supabaseClient !== 'undefined' && supabaseClient) {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (user) {
-        // Consultar el perfil en la tabla 'perfiles'
         const { data: perfil, error } = await supabaseClient
           .from('perfiles')
           .select('nombre_completo')
@@ -64,11 +61,10 @@ async function cargarNombreUsuario() {
     console.error("Error consultando sesión o perfil:", err);
   }
 
-  // 3. Respaldo por defecto
   userNameEl.textContent = "Pasajero";
 }
 
-// Inicializar buscador avanzado con sugerencias en tiempo real
+// Inicializar buscador avanzado conectado al filtro seguro de mapa.js
 function inicializarBuscadorDestino() {
   const inputDestino = document.getElementById('destino-txt');
   const contenedorSugerencias = document.getElementById('sugerencias-destino');
@@ -90,9 +86,8 @@ function inicializarBuscadorDestino() {
     // Esperar a que el usuario termine de escribir (debounce de 400ms)
     timeoutId = setTimeout(async () => {
       try {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
-        const response = await fetch(url);
-        const data = await response.json();
+        // Usamos la función blindada de mapa.js que filtra por Venezuela y 50km
+        const data = await buscarDestinosVenezuela(query);
 
         contenedorSugerencias.innerHTML = '';
 
@@ -100,11 +95,14 @@ function inicializarBuscadorDestino() {
           data.forEach(lugar => {
             const item = document.createElement('div');
             item.className = "px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-orange-50 hover:text-orange-600 cursor-pointer border-b border-slate-100 last:border-none truncate";
-            item.textContent = lugar.display_name;
+            
+            // Mostrar nombre del sitio y la distancia calculada en km
+            const distanciaInfo = lugar.distancia_km ? ` (${lugar.distancia_km.toFixed(1)} km)` : '';
+            item.textContent = lugar.display_name + distanciaInfo;
 
             // Al hacer clic en una sugerencia de la lista
             item.addEventListener('click', async () => {
-              inputDestino.value = lugar.display_name.split(',')[0]; // Mostrar nombre corto en el input
+              inputDestino.value = lugar.display_name.split(',')[0]; 
               contenedorSugerencias.classList.add('hidden');
               
               const lat = parseFloat(lugar.lat);
@@ -133,22 +131,20 @@ function inicializarBuscadorDestino() {
   });
 }
 
-// Buscar coordenadas escribiendo el destino
+// Buscar coordenadas escribiendo el destino mediante el filtro seguro
 async function buscarDestinoPorTexto(query) {
   const inputDestino = document.getElementById('destino-txt');
   try {
     if (inputDestino) inputDestino.value = "Buscando ubicación...";
 
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
-    const response = await fetch(url);
-    const data = await response.json();
+    const data = await buscarDestinosVenezuela(query);
 
     if (data && data.length > 0) {
       const lat = parseFloat(data[0].lat);
       const lng = parseFloat(data[0].lon);
       await establecerPuntoDestino(lat, lng, data[0].display_name);
     } else {
-      alert("No se encontró la dirección. Intenta con un nombre más específico.");
+      alert("No se encontró la dirección dentro de la zona permitida. Intenta con un nombre más específico.");
       if (inputDestino) inputDestino.value = query;
     }
   } catch (err) {
@@ -161,7 +157,7 @@ async function buscarDestinoPorTexto(query) {
 async function establecerPuntoDestino(lat, lng, nombrePersonalizado = null) {
   coordsDestino = { lat, lng };
 
-  // Validar radio máximo de cobertura (Ej: 50 km desde el Origen)
+  // Validar radio máximo de cobertura (50 km desde el Origen)
   if (coordsOrigen) {
     const distanciaKm = calcularDistanciaLineal(coordsOrigen.lat, coordsOrigen.lng, lat, lng);
     if (distanciaKm > 50) {
