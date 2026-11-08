@@ -79,7 +79,6 @@
   </div>
 
   <script>
-    // Inicialización de Supabase con tus credenciales
     const SUPABASE_URL = 'https://gklquvthucityzgcamao.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -95,7 +94,6 @@
         }
 
         const user = session.user;
-        // Obtener el nombre de forma segura evitando bloqueos si no está en metadata
         const nombre = user.user_metadata?.full_name || localStorage.getItem('voom_user_name') || user.email.split('@')[0];
         
         if (greetingEl) {
@@ -103,13 +101,13 @@
         }
       } catch (err) {
         console.error("Error al validar sesión en selector:", err);
-        if (greetingEl) greetingEl.textContent = `Hola, Conductor/Pasajero`;
+        if (greetingEl) greetingEl.textContent = `Hola, Usuario`;
       }
     });
 
     window.seleccionarModo = async function(modo) {
       if (modo === 'pasajero') {
-        window.location.href = 'pasajero_pe.html';
+        window.location.href = 'pasajero.html';
       } else {
         mostrarMensaje("Verificando credenciales de conductor...", "info");
 
