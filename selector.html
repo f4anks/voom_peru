@@ -122,11 +122,27 @@
             return;
           }
 
-          const { data, error } = await supabaseClient
+          // Creamos una promesa con timeout de 5 segundos para evitar que se quede congelado
+          const promesaConsulta = supabaseClient
             .from('perfiles')
             .select('estado_cuenta')
             .eq('id', user.id)
             .single();
+
+          const timeoutSupabase = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout de Supabase')), 5000)
+          );
+
+          let resultado;
+          try {
+            resultado = await Promise.race([promesaConsulta, timeoutSupabase]);
+          } catch (timeoutErr) {
+            console.warn("La consulta tardó mucho o falló, redirigiendo por seguridad a registro de conductor.");
+            window.location.href = 'registro_cond.html';
+            return;
+          }
+
+          const { data, error } = resultado;
 
           if (error || !data || data.estado_cuenta === 'pendiente' || !data.estado_cuenta) {
             window.location.href = 'registro_cond.html';
@@ -140,7 +156,7 @@
 
         } catch (err) {
           console.error("Error al verificar modo conductor:", err);
-          mostrarMensaje("Error de conexión al verificar el perfil.", "error");
+          window.location.href = 'registro_cond.html';
         }
       }
     };
