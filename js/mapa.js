@@ -83,32 +83,17 @@ function actualizarMarcadorDestino(lat, lng) {
 }
 
 /**
- * Función para buscar sitios cercanos en VENEZUELA (countrycodes=ve).
- * Crea una caja de búsqueda (viewbox) alrededor de la ubicación actual del usuario
- * y restringe estrictamente (bounded=1) los resultados a esa zona y al país.
+ * Buscador estricto: Filtra por país, calcula distancia real de cada resultado,
+ * descarta todo lo que supere el límite y ordena poniendo LOS MÁS CERCANOS PRIMERO.
  */
 async function buscarDestinosVenezuela(textoBusqueda) {
   if (!textoBusqueda || textoBusqueda.trim().length < 3) return [];
 
   try {
-    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(textoBusqueda)}&countrycodes=ve&limit=10`;
-
-    // Si tenemos la ubicación del usuario, creamos un marco (viewbox) de ~50km alrededor de él
-    if (latOrigenGlobal && lngOrigenGlobal) {
-      const delta = 0.45; // Aproximadamente 50km de margen geográfico
-      const minLng = lngOrigenGlobal - delta;
-      const minLat = latOrigenGlobal - delta;
-      const maxLng = lngOrigenGlobal + delta;
-      const maxLat = latOrigenGlobal + delta;
-
-      // viewbox=left,top,right,bottom & bounded=1 fuerza a que solo busque dentro de esa área cercana
-      url += `&viewbox=${minLng},${maxLat},${maxLng},${minLat}&bounded=1`;
-    }
-
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(textoBusqueda)}&countrycodes=ve&limit=20`;
     const response = await fetch(url);
     const sitios = await response.json();
 
-    // Ordenar y filtrar los sitios por distancia exacta desde el origen
     if (latOrigenGlobal && lngOrigenGlobal) {
       return sitios
         .map(sitio => {
@@ -121,8 +106,10 @@ async function buscarDestinosVenezuela(textoBusqueda) {
           sitio.distancia_km = dist;
           return sitio;
         })
+        // 1. Descartar de inmediato cualquier opción que pase de los kilómetros permitidos
         .filter(sitio => sitio.distancia_km <= DISTANCIA_MAXIMA_KM)
-        .sort((a, b) => a.distancia_km - b.distancia_km); // Ordena los más cercanos primero
+        // 2. Ordenar matemáticamente: el más cercano (menor km) va de primero
+        .sort((a, b) => a.distancia_km - b.distancia_km);
     }
 
     return sitios;
