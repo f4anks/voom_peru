@@ -1,4 +1,4 @@
-const CACHE_NAME = 'voom-cache-v4';
+const CACHE_NAME = 'voom-cache-v5';
 const urlsToCache = [
   './',
   './index.html',
@@ -9,9 +9,11 @@ const urlsToCache = [
   './js/anuncios.js',
   './js/pasajero.js',
   './js/conductor.js',
+  './js/admin.js',
   './pasajero.html',
   './conductor.html',
-  './registro_conductor.html',
+  './admin.html',
+  './registro_cond.html',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
