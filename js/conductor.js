@@ -17,8 +17,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Validar sesión activa
-  const { data: { user } } = await supabaseClient.auth.getUser();
-  if (!user) {
+  const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+  if (authError || !user) {
     window.location.href = 'index.html';
     return;
   }
@@ -28,7 +28,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Consultar comunicados de la administración para el conductor
   verificarAnunciosGlobales();
 
-  // Consultar perfil completo del conductor (nombre, cédula, estado y vehículo)
+  // Consultar perfil completo del conductor
   const { data: perfil, error } = await supabaseClient
     .from('perfiles')
     .select('estado_cuenta, cedula, vehiculo_placa, nombre_completo')
@@ -37,18 +37,20 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (error || !perfil) {
     console.error("Error al obtener perfil del conductor:", error);
+    const statusPanel = document.getElementById('status-panel');
+    if (statusPanel) {
+      statusPanel.textContent = "Error al cargar perfil. Intenta de nuevo.";
+      statusPanel.className = "p-4 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-800 font-bold text-center";
+    }
     return;
   }
 
-  // Mostrar el nombre y la cédula en la parte superior del header
-  const nombreDisplay = perfil.nombre_completo || user.user_metadata?.nombre_completo || user.email;
-  const cedulaDisplay = perfil.cedula ? `C.I: ${perfil.cedula}` : 'Sin cédula registrada';
-  
-  const elName = document.getElementById('user-name');
-  const elCedula = document.getElementById('user-cedula');
-  
-  if (elName) elName.innerText = nombreDisplay;
-  if (elCedula) elCedula.innerText = cedulaDisplay;
+  // Mostrar el nombre en el header del panel
+  const nombreDisplay = perfil.nombre_completo || user.user_metadata?.nombre_completo || user.email.split('@')[0];
+  const elGreeting = document.getElementById('conductor-greeting');
+  if (elGreeting) {
+    elGreeting.textContent = `Hola, ${nombreDisplay}`;
+  }
 
   // Validar estado de la cuenta del conductor
   if (perfil.estado_cuenta !== 'aprobado') {
@@ -56,19 +58,29 @@ window.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Inicializar mapa interactivo Leaflet si la cuenta está APROBADA
-  map = L.map('map').setView([10.4806, -66.9036], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
+  // Si está aprobado, actualizar panel de estado
+  const statusPanel = document.getElementById('status-panel');
+  if (statusPanel) {
+    statusPanel.textContent = "¡Cuenta Aprobada! Conéctate para recibir solicitudes.";
+    statusPanel.className = "p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-bold text-center";
+  }
 
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(position => {
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
-      map.setView([lat, lng], 15);
-      conductorMarker = L.marker([lat, lng]).addTo(map).bindPopup("<b>Tu Vehículo</b>").openPopup();
-    });
+  // Inicializar mapa interactivo Leaflet si la cuenta está APROBADA
+  const mapContainer = document.getElementById('map');
+  if (mapContainer) {
+    map = L.map('map').setView([10.4806, -66.9036], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(position => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        map.setView([lat, lng], 15);
+        conductorMarker = L.marker([lat, lng]).addTo(map).bindPopup("<b>Tu Vehículo</b>").openPopup();
+      });
+    }
   }
 
   cargarViajesPendientes();
@@ -76,30 +88,29 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 function mostrarPantallaBloqueo(estado) {
-  const contenedor = document.getElementById('lista-viajes');
-  if (!contenedor) return;
+  const statusPanel = document.getElementById('status-panel');
+  if (!statusPanel) return;
   
   const esPendiente = estado === 'pendiente';
   
-  contenedor.innerHTML = `
-    <div class="text-center py-6 px-4 bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs">
-      <div class="inline-flex items-center justify-center w-12 h-12 bg-orange-50 border border-orange-200 text-orange-600 rounded-2xl mb-3 shadow-xs animate-pulse">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </div>
-      <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider">
-        ${esPendiente ? 'Validación en Proceso' : 'Solicitud No Aprobada'}
-      </h3>
-      <p class="text-xs text-slate-500 mt-1.5 leading-relaxed font-medium">
-        ${esPendiente 
-          ? 'Tus documentos e información vehicular están siendo verificados por seguridad. Tu acceso se activará en breve.' 
-          : 'Lamentablemente tu perfil no cumple con los estándares requeridos.'}
-      </p>
-      <div class="mt-3 inline-flex items-center space-x-1.5 text-[10px] bg-orange-100 text-orange-700 font-extrabold px-3 py-1 rounded-full border border-orange-200">
-        <span class="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span>
-        <span>Sistemas seguros activos</span>
-      </div>
+  statusPanel.className = "p-6 rounded-2xl bg-orange-50 border border-orange-200 text-center space-y-3";
+  statusPanel.innerHTML = `
+    <div class="inline-flex items-center justify-center w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl shadow-xs animate-pulse mx-auto">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </div>
+    <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider">
+      ${esPendiente ? 'Validación en Proceso' : 'Cuenta Suspendida / No Aprobada'}
+    </h3>
+    <p class="text-xs text-slate-600 leading-relaxed font-medium">
+      ${esPendiente 
+        ? 'Tus documentos e información vehicular han sido recibidos correctamente y están siendo verificados por la administración. Tu acceso se activará en cuanto sean aprobados.' 
+        : 'Lamentablemente tu perfil no se encuentra aprobado en este momento. Contacta con soporte.'}
+    </p>
+    <div class="inline-flex items-center space-x-1.5 text-[10px] bg-orange-100 text-orange-700 font-extrabold px-3 py-1 rounded-full border border-orange-200">
+      <span class="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span>
+      <span>Esperando aprobación de documentos</span>
     </div>
   `;
 }
@@ -174,13 +185,6 @@ async function aceptarViaje(idViaje) {
 
   alert("🚀 ¡Viaje Aceptado! Dirígete a buscar al pasajero.");
   cargarViajesPendientes();
-}
-
-async function logout() {
-  if (supabaseClient) {
-    await supabaseClient.auth.signOut();
-  }
-  window.location.href = 'index.html';
 }
 
 // Verificación de Anuncios Globales desde Supabase para Conductores
