@@ -1,18 +1,82 @@
-<!-- Scripts JS independientes -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Voom - Panel de Conductor</title>
+  
+  <!-- Metadatos PWA -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#f8fafc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Voom">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    body { 
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col justify-between p-4 sm:p-6">
+
+  <!-- CONTENIDO PRINCIPAL DEL CONDUCTOR -->
+  <div class="w-full max-w-2xl mx-auto bg-white rounded-3xl shadow-[0_15px_40px_-15px_rgba(0,0,0,0.08)] border border-slate-200/80 p-6 sm:p-8 my-auto space-y-6">
+    
+    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Panel de Conductor</h1>
+        <p id="conductor-greeting" class="text-xs font-bold text-orange-600 mt-0.5 uppercase tracking-wider">Cargando estado...</p>
+      </div>
+      <button onclick="window.location.href='selector.html'" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all">
+        Cambiar Modo
+      </button>
+    </div>
+
+    <div id="status-panel" class="p-4 rounded-2xl bg-orange-50 border border-orange-200 text-xs text-orange-800 font-bold text-center">
+      Verificando estatus de cuenta...
+    </div>
+
+    <div class="space-y-4">
+      <div class="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between">
+        <div>
+          <h3 class="text-xs font-black text-slate-800 uppercase">Estado de Conexión</h3>
+          <p class="text-[11px] text-slate-500 font-medium">Activa tu disponibilidad para recibir solicitudes de viaje</p>
+        </div>
+        <div id="toggle-container">
+          <!-- El interruptor o estado se gestionará desde conductor.js -->
+        </div>
+      </div>
+    </div>
+
+    <div id="status-message" class="p-3.5 rounded-2xl text-xs text-center hidden font-bold border"></div>
+
+    <button onclick="cerrarSesion()" class="w-full text-xs font-bold text-slate-400 hover:text-red-500 transition-colors pt-2">
+      Cerrar Sesión de la Cuenta
+    </button>
+  </div>
+
+  <!-- Scripts JS independientes -->
   <script src="js/anuncios.js"></script>
   <script src="js/conductor.js"></script>
   
   <script>
-    const SUPABASE_URL = "https://gklquvthucityzgcamao.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM";
+    // Asignación segura a window para evitar errores si ya están declaradas en otros scripts
+    window.SUPABASE_URL = window.SUPABASE_URL || "https://gklquvthucityzgcamao.supabase.co";
+    window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM";
     
-    // Declarar como global con el nombre exacto que espera conductor.js
     let supabaseClient = null;
 
     window.addEventListener('DOMContentLoaded', () => {
       // Inicializar cliente Supabase global
       if (window.supabase && window.supabase.createClient) {
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
       }
 
       if (typeof verificarAnunciosGlobales === 'function') {
@@ -46,6 +110,14 @@
       });
     });
 
+    window.cerrarSesion = async function() {
+      if (supabaseClient) {
+        await supabaseClient.auth.signOut();
+      }
+      localStorage.clear();
+      window.location.href = 'index.html';
+    };
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(err => console.error('SW Error:', err));
@@ -64,3 +136,5 @@
       }
     });
   </script>
+</body>
+</html>
