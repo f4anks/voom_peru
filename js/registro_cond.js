@@ -1,113 +1,133 @@
-// Inicialización del cliente Supabase con tus credenciales reales
 const SUPABASE_URL = 'https://gklquvthucityzgcamao.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('form-registro-conductor');
-  if (form) {
-    form.addEventListener('submit', guardarDatosConductor);
-  }
-});
-
-async function guardarDatosConductor(event) {
-  event.preventDefault();
-  showMessage("Subiendo documentos y guardando perfil...", "info");
-
-  const { data: { user } } = await supabaseClient.auth.getUser();
-  if (!user) {
-    showMessage("No hay una sesión activa. Inicia sesión nuevamente.", "error");
-    setTimeout(() => window.location.href = 'index.html', 2000);
+document.addEventListener('DOMContentLoaded', async () => {
+  // Validar sesión activa
+  try {
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
+    if (error || !session) {
+      window.location.href = 'index.html';
+      return;
+    }
+  } catch (err) {
+    console.error("Error al verificar sesión:", err);
+    window.location.href = 'index.html';
     return;
   }
 
-  // Función auxiliar para subir un archivo individual al Storage de Supabase
-  async function subirArchivo(fileInputId, nombreCarpeta) {
-    const fileInput = document.getElementById(fileInputId);
-    if (!fileInput.files || fileInput.files.length === 0) return null;
-    
-    const file = fileInput.files[0];
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}_${nombreCarpeta}_${Date.now()}.${fileExt}`;
-    const filePath = `${fileName}`;
+  const formRegistro = document.getElementById('form-registro-conductor');
+  if (formRegistro) {
+    formRegistro.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      mostrarMensaje("Subiendo documentos y registrando datos...", "info");
 
-    const { error: uploadError } = await supabaseClient.storage
-      .from('documentos-conductores')
-      .upload(filePath, file);
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) {
+          window.location.href = 'index.html';
+          return;
+        }
+        const user = session.user;
 
-    if (uploadError) {
-      console.error(`Error subiendo ${nombreCarpeta}:`, uploadError.message);
-      return null;
-    }
+        // Función auxiliar para subir archivos al Storage de Supabase (Bucket: 'documentos')
+        async function subirArchivo(fileInputId, nombreCarpeta) {
+          const fileInput = document.getElementById(fileInputId);
+          if (!fileInput || !fileInput.files || fileInput.files.length === 0) return null;
+          
+          const file = fileInput.files[0];
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${user.id}/${nombreCarpeta}_${Date.now()}.${fileExt}`;
+          
+          const { error: uploadError } = await supabaseClient.storage
+            .from('documentos')
+            .upload(fileName, file, { upsert: true });
 
-    // Obtener URL pública de la imagen
-    const { data } = supabaseClient.storage
-      .from('documentos-conductores')
-      .getPublicUrl(filePath);
+          if (uploadError) {
+            throw new Error(`Error al subir ${nombreCarpeta}: ${uploadError.message}`);
+          }
 
-    return data.publicUrl;
+          // Obtener la URL pública del archivo subido
+          const { data: { publicUrl } } = supabaseClient.storage
+            .from('documentos')
+            .getPublicUrl(fileName);
+
+          return publicUrl;
+        }
+
+        // Subir las 5 imágenes requeridas
+        const fotoCedula = await subirArchivo('file-cedula', 'cedula');
+        const fotoLicencia = await subirArchivo('file-licencia', 'licencia');
+        const fotoCarnet = await subirArchivo('file-carnet', 'carnet');
+        const fotoTitulo = await subirArchivo('file-titulo', 'titulo');
+        const fotoVehiculo = await subirArchivo('file-vehiculo', 'vehiculo');
+
+        // Capturar los valores de los inputs de texto y fecha
+        const nombre_completo = document.getElementById('reg-nombre').value.trim();
+        const cedula = document.getElementById('reg-cedula').value.trim();
+        const fecha_nacimiento = document.getElementById('reg-fnac').value;
+        const licencia = document.getElementById('reg-licencia').value.trim();
+        const carnet = document.getElementById('reg-carnet').value.trim();
+
+        const vehiculo_placa = document.getElementById('veh-placa').value.trim().toUpperCase();
+        const vehiculo_marca = document.getElementById('veh-marca').value.trim();
+        const vehiculo_modelo = document.getElementById('veh-modelo').value.trim();
+        const vehiculo_color = document.getElementById('veh-color').value.trim();
+        const vehiculo_anio = parseInt(document.getElementById('veh-anio').value) || null;
+        const vehiculo_titulo = document.getElementById('veh-titulo').value.trim();
+
+        // Actualizar el perfil del usuario en Supabase con todos sus datos y estatus pendiente
+        const { error: updateError } = await supabaseClient
+          .from('perfiles')
+          .update({
+            nombre_completo,
+            cedula,
+            fecha_nacimiento,
+            licencia,
+            carnet,
+            vehiculo_placa,
+            vehiculo_marca,
+            vehiculo_modelo,
+            vehiculo_color,
+            vehiculo_anio,
+            vehiculo_titulo,
+            foto_cedula: fotoCedula,
+            foto_licencia: fotoLicencia,
+            foto_carnet: fotoCarnet,
+            foto_titulo: fotoTitulo,
+            foto_vehiculo: fotoVehiculo,
+            rol: 'conductor',
+            estado_cuenta: 'pendiente'
+          })
+          .eq('id', user.id);
+
+        if (updateError) throw updateError;
+
+        mostrarMensaje("¡Documentación enviada con éxito! Redirigiendo...", "exito");
+
+        setTimeout(() => {
+          window.location.href = 'selector.html';
+        }, 1500);
+
+      } catch (err) {
+        console.error("Error al registrar conductor:", err);
+        mostrarMensaje(err.message || "Ocurrió un error al procesar el registro.", "error");
+      }
+    });
   }
+});
 
-  try {
-    // Subir todas las fotos requeridas de forma simultánea
-    const urlCedula = await subirArchivo('file-cedula', 'cedula');
-    const urlLicencia = await subirArchivo('file-licencia', 'licencia');
-    const urlCarnet = await subirArchivo('file-carnet', 'carnet');
-    const urlTitulo = await subirArchivo('file-titulo', 'titulo');
-    const urlVehiculo = await subirArchivo('file-vehiculo', 'vehiculo');
-
-    // Objeto con toda la información unificada
-    const datosActualizacion = {
-      nombre_completo: document.getElementById('reg-nombre').value,
-      cedula: document.getElementById('reg-cedula').value,
-      fecha_nacimiento: document.getElementById('reg-fnac').value,
-      licencia: document.getElementById('reg-licencia').value,
-      carnet: document.getElementById('reg-carnet').value,
-      vehiculo_placa: document.getElementById('veh-placa').value.toUpperCase(),
-      vehiculo_marca: document.getElementById('veh-marca').value,
-      vehiculo_modelo: document.getElementById('veh-modelo').value,
-      vehiculo_color: document.getElementById('veh-color').value,
-      vehiculo_anio: document.getElementById('veh-anio').value,
-      vehiculo_titulo: document.getElementById('veh-titulo').value,
-      foto_cedula: urlCedula,
-      foto_licencia: urlLicencia,
-      foto_carnet: urlCarnet,
-      foto_titulo: urlTitulo,
-      foto_vehiculo: urlVehiculo,
-      estado_cuenta: 'pendiente',
-      rol: 'conductor'
-    };
-
-    const { error } = await supabaseClient
-      .from('perfiles')
-      .update(datosActualizacion)
-      .eq('id', user.id);
-
-    if (error) throw error;
-
-    showMessage("¡Registro y documentos enviados con éxito! Redirigiendo...", "success");
-
-    setTimeout(() => {
-      window.location.href = 'selector.html';
-    }, 1500);
-
-  } catch (err) {
-    console.error("Error al guardar en base de datos:", err);
-    showMessage("Error al guardar: " + (err.message || err), "error");
-  }
-}
-
-function showMessage(texto, tipo) {
+function mostrarMensaje(texto, tipo) {
   const statusMsg = document.getElementById('status-message');
   if (!statusMsg) return;
   statusMsg.textContent = texto;
-  statusMsg.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'border-red-200', 'bg-emerald-50', 'text-emerald-600', 'border-emerald-200', 'bg-slate-50', 'text-slate-600', 'border-slate-200');
+  statusMsg.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'border-red-200', 'bg-emerald-50', 'text-emerald-600', 'border-emerald-200', 'bg-orange-50', 'text-orange-600', 'border-orange-200');
 
   if (tipo === 'error') {
     statusMsg.classList.add('bg-red-50', 'text-red-600', 'border-red-200');
-  } else if (tipo === 'success') {
+  } else if (tipo === 'exito') {
     statusMsg.classList.add('bg-emerald-50', 'text-emerald-600', 'border-emerald-200');
   } else {
-    statusMsg.classList.add('bg-slate-50', 'text-slate-600', 'border-slate-200');
+    statusMsg.classList.add('bg-orange-50', 'text-orange-600', 'border-orange-200');
   }
 }
