@@ -10,12 +10,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // 2. SESIÓN PERSISTENTE: Si ya hay una sesión activa, entrar directo sin pedir clave
+  // 2. SESIÓN PERSISTENTE: Si ya hay una sesión activa, entrar directo al selector sin pedir clave
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session && session.user) {
-      const role = session.user.user_metadata?.role || 'pasajero';
-      redirigirSegunRol(role, session.user.id);
+      redirigirAlSelector();
       return;
     }
   } catch (err) {
@@ -62,14 +61,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (error) throw error;
 
-        const role = data.user.user_metadata?.role || 'pasajero';
         const nombreUsuario = data.user.user_metadata?.full_name || email.split('@')[0];
         localStorage.setItem('voom_user_name', nombreUsuario);
 
         mostrarMensaje("¡Bienvenido a Voom!", "éxito");
 
         setTimeout(() => {
-          redirigirSegunRol(role, data.user.id);
+          redirigirAlSelector();
         }, 1000);
 
       } catch (err) {
@@ -104,7 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         mostrarMensaje("Cuenta creada exitosamente.", "éxito");
 
         setTimeout(() => {
-          redirigirSegunRol(role, data.user.id);
+          redirigirAlSelector();
         }, 1000);
 
       } catch (err) {
@@ -128,26 +126,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Función de redirección inteligente según el rol del usuario
-async function redirigirSegunRol(role, userId) {
-  if (role === 'conductor') {
-    // Verificar si el conductor ya subió sus documentos y está aprobado/pendiente
-    const { data, error } = await supabaseClient
-      .from('perfiles')
-      .select('estado_cuenta')
-      .eq('id', userId)
-      .single();
-
-    // Si no ha llenado sus datos de conductor o está pendiente, mandarlo al registro de documentos
-    if (error || !data || data.estado_cuenta === 'pendiente' || !data.estado_cuenta) {
-      window.location.href = 'registro_conductor.html';
-    } else {
-      window.location.href = 'conductor.html';
-    }
-  } else {
-    // Si es pasajero, directo a su mapa
-    window.location.href = 'pasajero_pe.html';
-  }
+// Función para redirigir a la pantalla de selección central
+function redirigirAlSelector() {
+  window.location.href = 'selector.html';
 }
 
 // Función para comprobar si la PWA se abrió instalada
