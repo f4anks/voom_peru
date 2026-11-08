@@ -8,7 +8,6 @@ let conductorMarker = null;
 let userConductor = null;
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // Inicializar cliente Supabase evitando colisión con el SDK global
   if (window.supabase && window.supabase.createClient) {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   } else {
@@ -24,48 +23,41 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   userConductor = user;
-
-  // Consultar comunicados de la administración para el conductor
   verificarAnunciosGlobales();
 
-  // Consultar perfil completo del conductor
+  // Consultar perfil del conductor en Supabase
   const { data: perfil, error } = await supabaseClient
     .from('perfiles')
     .select('estado_cuenta, cedula, vehiculo_placa, nombre_completo')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
-  if (error || !perfil) {
-    console.error("Error al obtener perfil del conductor:", error);
-    const statusPanel = document.getElementById('status-panel');
-    if (statusPanel) {
-      statusPanel.textContent = "Error al cargar perfil. Intenta de nuevo.";
-      statusPanel.className = "p-4 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-800 font-bold text-center";
-    }
+  // Si no tiene perfil o no ha subido documentos, va al registro de conductor
+  if (error || !perfil || !perfil.cedula) {
+    window.location.href = 'registro_cond.html';
     return;
   }
 
-  // Mostrar el nombre en el header del panel
-  const nombreDisplay = perfil.nombre_completo || user.user_metadata?.nombre_completo || user.email.split('@')[0];
+  const nombreDisplay = perfil.nombre_completo || user.user_metadata?.full_name || user.email.split('@')[0];
   const elGreeting = document.getElementById('conductor-greeting');
   if (elGreeting) {
     elGreeting.textContent = `Hola, ${nombreDisplay}`;
   }
 
-  // Validar estado de la cuenta del conductor
+  // VALIDACIÓN ESTRICTA DE ESTADO:
+  // Si NO está aprobado, bloqueamos el panel y mostramos el mensaje de espera de revisión del admin.
   if (perfil.estado_cuenta !== 'aprobado') {
-    mostrarPantallaBloqueo(perfil.estado_cuenta);
+    mostrarPantallaEsperaAprobacion(perfil.estado_cuenta);
     return;
   }
 
-  // Si está aprobado, actualizar panel de estado
+  // --- SOLO SI EL ADMIN YA APROBÓ, SE MUESTRA EL PANEL COMPLETO Y EL MAPA ---
   const statusPanel = document.getElementById('status-panel');
   if (statusPanel) {
-    statusPanel.textContent = "¡Cuenta Aprobada! Conéctate para recibir solicitudes.";
+    statusPanel.textContent = "¡Cuenta Aprobada por la Administración! Conéctate para recibir solicitudes.";
     statusPanel.className = "p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-bold text-center";
   }
 
-  // Inicializar mapa interactivo Leaflet si la cuenta está APROBADA
   const mapContainer = document.getElementById('map');
   if (mapContainer) {
     map = L.map('map').setView([10.4806, -66.9036], 13);
@@ -87,13 +79,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   escucharNuevosViajes();
 });
 
-function mostrarPantallaBloqueo(estado) {
+// Pantalla de bloqueo obligatoria mientras el Admin no apruebe
+function mostrarPantallaEsperaAprobacion(estado) {
   const statusPanel = document.getElementById('status-panel');
   if (!statusPanel) return;
   
-  const esPendiente = estado === 'pendiente';
-  
-  statusPanel.className = "p-6 rounded-2xl bg-orange-50 border border-orange-200 text-center space-y-3";
+  const esSuspendido = estado === 'suspendido';
+
+  statusPanel.className = "p-6 rounded-2xl bg-orange-50 border border-orange-200 text-center space-y-3 shadow-sm";
   statusPanel.innerHTML = `
     <div class="inline-flex items-center justify-center w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl shadow-xs animate-pulse mx-auto">
       <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
@@ -101,18 +94,22 @@ function mostrarPantallaBloqueo(estado) {
       </svg>
     </div>
     <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider">
-      ${esPendiente ? 'Validación en Proceso' : 'Cuenta Suspendida / No Aprobada'}
+      ${esSuspendido ? 'Cuenta Suspendida' : 'Esperando Aprobación del Administrador'}
     </h3>
     <p class="text-xs text-slate-600 leading-relaxed font-medium">
-      ${esPendiente 
-        ? 'Tus documentos e información vehicular han sido recibidos correctamente y están siendo verificados por la administración. Tu acceso se activará en cuanto sean aprobados.' 
-        : 'Lamentablemente tu perfil no se encuentra aprobado en este momento. Contacta con soporte.'}
+      ${esSuspendido 
+        ? 'Tu cuenta se encuentra suspendida por la administración.' 
+        : 'Tus documentos han sido enviados con éxito. Un administrador debe revisar y aprobar tu perfil desde el panel de control antes de que puedas conectarte para recibir carreras.'}
     </p>
     <div class="inline-flex items-center space-x-1.5 text-[10px] bg-orange-100 text-orange-700 font-extrabold px-3 py-1 rounded-full border border-orange-200">
       <span class="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span>
-      <span>Esperando aprobación de documentos</span>
+      <span>Pendiente de revisión administrativa</span>
     </div>
   `;
+
+  // Ocultar elementos de conexión si existen
+  const toggleContainer = document.getElementById('toggle-container');
+  if (toggleContainer) toggleContainer.innerHTML = '';
 }
 
 async function cargarViajesPendientes() {
@@ -121,18 +118,13 @@ async function cargarViajesPendientes() {
     .select('*, perfiles(nombre_completo)')
     .eq('estado', 'buscando');
 
-  if (error) {
-    console.error("Error cargando viajes:", error);
-    return;
-  }
-
+  if (error) return;
   renderizarViajes(viajes);
 }
 
 function renderizarViajes(viajes) {
   const contenedor = document.getElementById('lista-viajes');
   if (!contenedor) return;
-  
   contenedor.innerHTML = '';
 
   if (!viajes || viajes.length === 0) {
@@ -148,7 +140,7 @@ function renderizarViajes(viajes) {
         <p class="text-xs font-extrabold text-slate-900">Destino: ${v.destino_direccion}</p>
         <p class="text-xs font-extrabold text-orange-600 mt-0.5">Tarifa: $${v.precio}</p>
       </div>
-      <button onclick="aceptarViaje('${v.id}')" class="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-md shadow-orange-500/25 active:scale-[0.98]">
+      <button onclick="aceptarViaje('${v.id}')" class="bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-xs px-4 py-2.5 rounded-xl">
         Aceptar
       </button>
     `;
@@ -159,39 +151,29 @@ function renderizarViajes(viajes) {
 function escucharNuevosViajes() {
   supabaseClient
     .channel('viajes-disponibles')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'viajes' },
-      () => {
-        cargarViajesPendientes();
-      }
-    )
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'viajes' }, () => {
+      cargarViajesPendientes();
+    })
     .subscribe();
 }
 
 async function aceptarViaje(idViaje) {
   const { error } = await supabaseClient
     .from('viajes')
-    .update({
-      conductor_id: userConductor.id,
-      estado: 'aceptado'
-    })
+    .update({ conductor_id: userConductor.id, estado: 'aceptado' })
     .eq('id', idViaje);
 
   if (error) {
     alert("No se pudo aceptar el viaje: " + error.message);
     return;
   }
-
-  alert("🚀 ¡Viaje Aceptado! Dirígete a buscar al pasajero.");
+  alert("🚀 ¡Viaje Aceptado!");
   cargarViajesPendientes();
 }
 
-// Verificación de Anuncios Globales desde Supabase para Conductores
 async function verificarAnunciosGlobales() {
   try {
     if (!supabaseClient) return;
-
     const { data, error } = await supabaseClient
       .from('anuncios')
       .select('*')
@@ -199,7 +181,6 @@ async function verificarAnunciosGlobales() {
       .limit(1);
 
     if (error || !data || data.length === 0) return;
-
     const ultimoAnuncio = data[0];
     const ultimoVistoId = localStorage.getItem('voom_ultimo_anuncio_id_conductor');
 
@@ -211,13 +192,12 @@ async function verificarAnunciosGlobales() {
       if (modal && tituloEl && mensajeEl) {
         tituloEl.textContent = ultimoAnuncio.titulo || "Comunicado Oficial";
         mensajeEl.textContent = ultimoAnuncio.mensaje || "";
-        
         modal.classList.remove('hidden');
         localStorage.setItem('voom_ultimo_anuncio_id_conductor', ultimoAnuncio.id);
       }
     }
   } catch (err) {
-    console.error("Error al obtener anuncios globales para conductor:", err);
+    console.error("Error al obtener anuncios:", err);
   }
 }
 
