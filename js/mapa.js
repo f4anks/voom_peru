@@ -10,17 +10,17 @@ const DISTANCIA_MAXIMA_KM = 50;
 let latOrigenGlobal = null;
 let lngOrigenGlobal = null;
 
-// Inicializar el mapa centrado en Lima, Perú por defecto (Estilo Minimalista/Claro)
+// Inicializar el mapa centrado en Lima, Perú por defecto (Sin API Key, 100% libre)
 function inicializarMapaPeru(latCentro = -12.0464, lngCentro = -77.0428) {
   latOrigenGlobal = latCentro;
   lngOrigenGlobal = lngCentro;
 
   map = L.map('map', { zoomControl: false }).setView([latCentro, lngCentro], 14);
 
-  // Mapa base limpio, claro y sin saturación de colores (CartoDB Positron)
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  // Usar OpenStreetMap estándar limpio (sin restricciones de API key)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
   L.control.zoom({ position: 'bottomright' }).addTo(map);
