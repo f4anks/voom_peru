@@ -83,16 +83,15 @@ function actualizarMarcadorDestino(lat, lng) {
 }
 
 /**
- * Buscador blindado con control fronterizo: 
- * Incluye &addressdetails=1 para validar que el país sea estrictamente Venezuela ('ve')
- * y descarta cualquier ciudad vecina como Cúcuta.
+ * Buscador ultraseguro para Venezuela:
+ * Filtra por distancia, valida estrictamente el país y descarta por nombre 
+ * cualquier país extranjero no deseado (como Colombia, Rumania, Brasil, etc.).
  */
 async function buscarDestinosVenezuela(textoBusqueda) {
   if (!textoBusqueda || textoBusqueda.trim().length < 3) return [];
 
   try {
-    // Añadimos &addressdetails=1 para obtener metadatos de país y región de cada sitio
-    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(textoBusqueda)}&countrycodes=ve&addressdetails=1&limit=25`;
+    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(textoBusqueda)}&countrycodes=ve&addressdetails=1&limit=30`;
 
     if (latOrigenGlobal && lngOrigenGlobal) {
       const delta = 0.4; 
@@ -120,12 +119,22 @@ async function buscarDestinosVenezuela(textoBusqueda) {
           return sitio;
         })
         .filter(sitio => {
-          // Obtener el código de país que devuelve OpenStreetMap (ej: 've', 'co', etc.)
-          const countryCode = sitio.address && sitio.address.country_code;
-          
-          // Filtro estricto: Debe pertenecer a Venezuela ('ve') Y estar dentro de los 50 km
-          const esDeVenezuela = countryCode ? countryCode === 've' : true;
-          return esDeVenezuela && sitio.distancia_km <= DISTANCIA_MAXIMA_KM;
+          const address = sitio.address || {};
+          const countryCode = address.country_code ? address.country_code.toLowerCase() : '';
+          const displayName = (sitio.display_name || '').toLowerCase();
+
+          // 1. RECHAZAR si el código de país de la API no es Venezuela
+          if (countryCode && countryCode !== 've') return false;
+
+          // 2. RECHAZAR palabras clave extranjeras comunes que la API intente colar
+          const terminosExtranjerosProhibidos = ['colombia', 'rumania', 'romania', 'brasil', 'brazil', 'peru', 'ecuador', 'españa', 'united states', 'méxico'];
+          const contieneExtranjero = terminosExtranjerosProhibidos.some(pais => displayName.includes(pais));
+          if (contieneExtranjero) return false;
+
+          // 3. RECHAZAR si supera el límite de los 50 km de distancia real
+          if (sitio.distancia_km > DISTANCIA_MAXIMA_KM) return false;
+
+          return true;
         })
         // Ordenar del más cercano al más lejano
         .sort((a, b) => a.distancia_km - b.distancia_km);
