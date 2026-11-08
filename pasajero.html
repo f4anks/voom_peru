@@ -137,7 +137,40 @@
   <script src="./js/pasajero.js"></script>
 
   <script>
+    const SUPABASE_URL_CLIENT = "https://gklquvthucityzgcamao.supabase.co";
+    const SUPABASE_ANON_KEY_CLIENT = "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM";
+    let supabaseAppClient = null;
+
     window.addEventListener('DOMContentLoaded', () => {
+      // Inicializar cliente Supabase local para el realtime del pasajero
+      if (window.supabase && window.supabase.createClient) {
+        supabaseAppClient = window.supabase.createClient(SUPABASE_URL_CLIENT, SUPABASE_ANON_KEY_CLIENT);
+        
+        // Activar escucha en tiempo real para nuevos anuncios
+        supabaseAppClient
+          .channel('pasajero-anuncios-rt')
+          .on(
+            'postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'anuncios' },
+            (payload) => {
+              const nuevo = payload.new;
+              // Validar si el anuncio va dirigido a todos o a pasajeros exclusivamente
+              if (nuevo.destinatario === 'todos' || nuevo.destinatario === 'pasajeros') {
+                const tituloEl = document.getElementById('anuncio-modal-titulo');
+                const mensajeEl = document.getElementById('anuncio-modal-mensaje');
+                const modalEl = document.getElementById('modal-anuncio');
+
+                if (tituloEl && mensajeEl && modalEl) {
+                  tituloEl.innerText = nuevo.titulo || 'Comunicado Voom';
+                  mensajeEl.innerText = nuevo.mensaje || '';
+                  modalEl.classList.remove('hidden');
+                }
+              }
+            }
+          )
+          .subscribe();
+      }
+
       if (typeof verificarAnunciosGlobales === 'function') {
         verificarAnunciosGlobales('pasajero');
       }
