@@ -75,13 +75,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Manejo de Registro (Sin selector de rol previo)
+  // Manejo de Registro (Con validación de DNI y Celular de Perú)
   if (formRegister) {
     formRegister.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const name = document.getElementById('reg-name').value;
-      const email = document.getElementById('reg-email').value;
+      const name = document.getElementById('reg-name').value.trim();
+      const dni = document.getElementById('reg-dni').value.trim();
+      const telefono = document.getElementById('reg-telefono').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
       const password = document.getElementById('reg-password').value;
+
+      // Validaciones de formato peruano
+      if (dni.length !== 8 || isNaN(dni)) {
+        mostrarMensaje("El DNI debe tener exactamente 8 dígitos numéricos.", "error");
+        return;
+      }
+
+      if (!telefono.startsWith('9') || telefono.length !== 9 || isNaN(telefono)) {
+        mostrarMensaje("El celular debe comenzar con 9 y tener 9 dígitos.", "error");
+        return;
+      }
 
       mostrarMensaje("Creando tu cuenta...", "info");
 
@@ -92,6 +105,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           options: {
             data: { 
               full_name: name, 
+              dni: dni,
+              telefono: telefono,
               role: 'pasajero' // Rol base unificado para nuevos registros
             }
           }
