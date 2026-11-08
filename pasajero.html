@@ -79,10 +79,13 @@
       </div>
       
       <div class="space-y-3">
-        <!-- Input Origen -->
+        <!-- Input Origen Habilitado con Autocompletado -->
         <div class="relative flex items-center">
           <div class="w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white shadow-xs absolute left-4 z-10"></div>
-          <input type="text" id="origen-txt" readonly value="Detectando tu ubicación..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-xs font-semibold text-slate-700 focus:outline-none" />
+          <input type="text" id="origen-txt" placeholder="Punto de origen o buscando GPS..." autocomplete="off" class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 transition-all" />
+          
+          <!-- Contenedor Desplegable de Sugerencias de Origen -->
+          <div id="sugerencias-origen" class="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl max-h-52 overflow-y-auto hidden z-[2000] divide-y divide-slate-100"></div>
         </div>
 
         <!-- Input Destino con Sugerencias Autocompletadas -->
@@ -90,7 +93,7 @@
           <div class="w-3.5 h-3.5 bg-orange-500 rounded-full border-2 border-white shadow-xs absolute left-4 z-10"></div>
           <input type="text" id="destino-txt" placeholder="Ingresa punto de destino o busca..." autocomplete="off" class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" />
           
-          <!-- Contenedor Desplegable de Sugerencias -->
+          <!-- Contenedor Desplegable de Sugerencias de Destino -->
           <div id="sugerencias-destino" class="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl max-h-52 overflow-y-auto hidden z-[2000] divide-y divide-slate-100"></div>
         </div>
 
@@ -101,7 +104,7 @@
             <span id="distancia-texto" class="text-[11px] font-semibold text-slate-500">0.0 km</span>
           </div>
           <div class="text-right">
-            <span id="precio-monto" class="text-xl font-black text-emerald-700 leading-none">$0.00</span>
+            <span id="precio-monto" class="text-xl font-black text-emerald-700 leading-none">S/. 0.00</span>
           </div>
         </div>
 
@@ -136,10 +139,10 @@
     </div>
   </div>
 
- <!-- Scripts JS independientes para Perú -->
-  <script src="./js/mapa_pe.js"></script>
+  <!-- Scripts JS independientes y estandarizados -->
+  <script src="./js/mapa.js"></script>
   <script src="./js/anuncios.js"></script>
-  <script src="./js/pasajero_pe.js"></script>
+  <script src="./js/pasajero.js"></script>
 
   <script>
     const SUPABASE_URL_CLIENT = "https://gklquvthucityzgcamao.supabase.co";
@@ -159,7 +162,6 @@
             { event: 'INSERT', schema: 'public', table: 'anuncios' },
             (payload) => {
               const nuevo = payload.new;
-              // Validar si el anuncio va dirigido a todos o a pasajeros exclusivamente
               if (nuevo.destinatario === 'todos' || nuevo.destinatario === 'pasajeros') {
                 const tituloEl = document.getElementById('anuncio-modal-titulo');
                 const mensajeEl = document.getElementById('anuncio-modal-mensaje');
@@ -182,7 +184,6 @@
 
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       window.OneSignalDeferred.push(async function(OneSignal) {
-        // Registrar el Service Worker explícitamente en la subcarpeta del repositorio
         if ('serviceWorker' in navigator) {
           try {
             await navigator.serviceWorker.register('/voom_peru/OneSignalSDKWorker.js', {
