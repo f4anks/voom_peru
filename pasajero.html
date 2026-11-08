@@ -137,32 +137,26 @@
   <script src="./js/pasajero.js"></script>
 
   <script>
-    // Inicializar verificación de anuncios y OneSignal al cargar la página
     window.addEventListener('DOMContentLoaded', () => {
       if (typeof verificarAnunciosGlobales === 'function') {
         verificarAnunciosGlobales('pasajero');
       }
 
-      // Inicialización optimizada para OneSignal en GitHub Pages (subcarpeta)
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       window.OneSignalDeferred.push(async function(OneSignal) {
         await OneSignal.init({
           appId: "98bfb199-5190-4c51-93b0-2cffb11c79e7",
-          allowLocalhostAsSecureOrigin: true,
           notifyButton: { enable: false }
         });
 
-        // Asignar etiqueta 'pasajero' para segmentar envíos desde el admin
         await OneSignal.User.addTag("rol", "pasajero");
 
-        // Solicitar permisos de notificación de forma amigable
         if (!OneSignal.User.PushSubscription.optedIn) {
           OneSignal.Slidedown.promptPush();
         }
       });
     });
 
-    // Función para forzar la actualización del código fuente limpiando Service Workers y Caché local
     async function forceAppUpdate() {
       if ('serviceWorker' in navigator) {
         try {
@@ -193,7 +187,6 @@
       });
     }
 
-    // Protecciones de interfaz
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.addEventListener('keydown', e => {
       if (
