@@ -112,11 +112,13 @@
         try {
           mostrarMensaje("Verificando credenciales de conductor...", "info");
 
-          const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-          if (authError || !user) {
+          // Obtenemos la sesión local de manera instantánea sin bloquear la red
+          const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+          if (sessionError || !session || !session.user) {
             window.location.href = 'index.html';
             return;
           }
+          const user = session.user;
 
           // Consulta con control de tiempo límite (Timeout de 4 segundos)
           const consultaPerfil = supabaseClient
@@ -140,7 +142,7 @@
 
           const { data, error } = resultado;
 
-          // Si no hay perfil registrado aún, o está pendiente, va a registro de conductor
+          // Redirección exacta según el estado de la cuenta
           if (error || !data || data.estado_cuenta === 'pendiente' || !data.estado_cuenta) {
             window.location.href = 'registro_cond.html';
           } else if (data.estado_cuenta === 'aprobado') {
