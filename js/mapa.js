@@ -83,14 +83,27 @@ function actualizarMarcadorDestino(lat, lng) {
 }
 
 /**
- * Buscador estricto: Filtra por país, calcula distancia real de cada resultado,
- * descarta todo lo que supere el límite y ordena poniendo LOS MÁS CERCANOS PRIMERO.
+ * Buscador blindado para Venezuela: Utiliza viewbox estricto (bounded=1),
+ * filtra por distancia máxima de 50 km y ordena por proximidad absoluta.
  */
 async function buscarDestinosVenezuela(textoBusqueda) {
   if (!textoBusqueda || textoBusqueda.trim().length < 3) return [];
 
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(textoBusqueda)}&countrycodes=ve&limit=20`;
+    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(textoBusqueda)}&countrycodes=ve&limit=20`;
+
+    // Si el origen está detectado, creamos una caja estricta alrededor de él (~50km a la redonda)
+    if (latOrigenGlobal && lngOrigenGlobal) {
+      const delta = 0.5; // Margen geográfico controlado
+      const minLng = lngOrigenGlobal - delta;
+      const minLat = latOrigenGlobal - delta;
+      const maxLng = lngOrigenGlobal + delta;
+      const maxLat = latOrigenGlobal + delta;
+
+      // viewbox + bounded=1 obliga a Nominatim a cortar de raíz cualquier resultado fuera de este cuadro
+      url += `&viewbox=${minLng},${maxLat},${maxLng},${minLat}&bounded=1`;
+    }
+
     const response = await fetch(url);
     const sitios = await response.json();
 
@@ -106,9 +119,9 @@ async function buscarDestinosVenezuela(textoBusqueda) {
           sitio.distancia_km = dist;
           return sitio;
         })
-        // 1. Descartar de inmediato cualquier opción que pase de los kilómetros permitidos
+        // 1. Eliminar cualquier opción que supere los 50 km
         .filter(sitio => sitio.distancia_km <= DISTANCIA_MAXIMA_KM)
-        // 2. Ordenar matemáticamente: el más cercano (menor km) va de primero
+        // 2. Ordenar para que el resultado más cercano esté siempre arriba
         .sort((a, b) => a.distancia_km - b.distancia_km);
     }
 
