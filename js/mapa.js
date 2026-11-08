@@ -9,8 +9,8 @@ const DISTANCIA_MAXIMA_KM = 50;
 let latOrigenGlobal = null;
 let lngOrigenGlobal = null;
 
-// Inicializar el mapa
-function inicializarMapa(latCentro, lngCentro) {
+// Inicializar el mapa centrado en Lima, Perú por defecto
+function inicializarMapaPeru(latCentro = -12.0464, lngCentro = -77.0428) {
   latOrigenGlobal = latCentro;
   lngOrigenGlobal = lngCentro;
 
@@ -83,17 +83,15 @@ function actualizarMarcadorDestino(lat, lng) {
 }
 
 /**
- * Buscador blindado de alta precisión:
- * Forzado geográfico para Venezuela + Filtro de 50 km + Exclusión de homónimos internacionales.
+ * Buscador blindado de alta precisión para PERÚ:
+ * Forzado geográfico para Perú (countrycodes=pe) + Filtro de 50 km + Exclusión de homónimos internacionales.
  */
-async function buscarDestinosVenezuela(textoBusqueda) {
+async function buscarDestinosPeru(textoBusqueda) {
   if (!textoBusqueda || textoBusqueda.trim().length < 3) return [];
 
   try {
-    // Parámetros base: addressdetails=1 y countrycodes=ve
-    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(textoBusqueda)}&countrycodes=ve&addressdetails=1&limit=40`;
+    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(textoBusqueda)}&countrycodes=pe&addressdetails=1&limit=40`;
 
-    // Si el origen está listo, cerramos el cuadro visual alrededor del usuario (~50km)
     if (latOrigenGlobal && lngOrigenGlobal) {
       const delta = 0.45;
       const minLng = lngOrigenGlobal - delta;
@@ -103,8 +101,7 @@ async function buscarDestinosVenezuela(textoBusqueda) {
 
       url += `&viewbox=${minLng},${maxLat},${maxLng},${minLat}&bounded=1`;
     } else {
-      // Coordenadas caja límite general de toda Venezuela por si el GPS del origen no ha cargado aún
-      url += `&viewbox=-73.35,12.2,-59.8,0.66&bounded=1`;
+      url += `&viewbox=-81.33,-0.04,-68.65,-18.35&bounded=1`;
     }
 
     const response = await fetch(url);
@@ -130,16 +127,13 @@ async function buscarDestinosVenezuela(textoBusqueda) {
         const countryName = (address.country || '').toLowerCase();
         const displayName = (sitio.display_name || '').toLowerCase();
 
-        // 1. RECHAZO ABSOLUTO: Si la respuesta no pertenece a Venezuela
-        if (countryCode && countryCode !== 've') return false;
-        if (countryName && !countryName.includes('venezuela') && countryName.length > 0) return false;
+        if (countryCode && countryCode !== 'pe') return false;
+        if (countryName && !countryName.includes('perú') && !countryName.includes('peru') && countryName.length > 0) return false;
 
-        // 2. FILTRO PALABRAS CLAVE EXTRANJERAS
-        const paisesBloqueados = ['brasil', 'brazil', 'italy', 'italia', 'rumania', 'romania', 'colombia', 'peru', 'ecuador', 'verona'];
+        const paisesBloqueados = ['venezuela', 'brasil', 'brazil', 'italy', 'italia', 'rumania', 'romania', 'colombia', 'ecuador', 'españa'];
         const esExtranjero = paisesBloqueados.some(p => displayName.includes(p));
-        if (esExtranjero && !displayName.includes('venezuela')) return false;
+        if (esExtranjero && !displayName.includes('perú') && !displayName.includes('peru')) return false;
 
-        // 3. FILTRO DISTANCIA 50 KM (Si el origen está activo)
         if (latOrigenGlobal && lngOrigenGlobal && sitio.distancia_km > DISTANCIA_MAXIMA_KM) {
           return false;
         }
@@ -148,21 +142,18 @@ async function buscarDestinosVenezuela(textoBusqueda) {
       })
       .sort((a, b) => a.distancia_km - b.distancia_km);
   } catch (error) {
-    console.error("Error al buscar sitios cercanos:", error);
+    console.error("Error al buscar sitios cercanos en Perú:", error);
     return [];
   }
 }
 
-/**
- * Fórmula matemática de Haversine para calcular distancia en kilómetros
- */
 function calcularDistanciaHaversine(lat1, lon1, lat2, lon2) {
   const R = 6371;
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
