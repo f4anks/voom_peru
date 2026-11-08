@@ -109,24 +109,38 @@
       if (modo === 'pasajero') {
         window.location.href = 'pasajero.html';
       } else {
-        mostrarMensaje("Verificando credenciales de conductor...", "info");
+        try {
+          mostrarMensaje("Verificando credenciales de conductor...", "info");
 
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) {
-          window.location.href = 'index.html';
-          return;
-        }
+          if (!supabaseClient) {
+            throw new Error("Cliente de Supabase no inicializado.");
+          }
 
-        const { data, error } = await supabaseClient
-          .from('perfiles')
-          .select('estado_cuenta')
-          .eq('id', user.id)
-          .single();
+          const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+          if (authError || !user) {
+            window.location.href = 'index.html';
+            return;
+          }
 
-        if (error || !data || data.estado_cuenta === 'pendiente' || !data.estado_cuenta) {
-          window.location.href = 'registro_cond.html';
-        } else {
-          window.location.href = 'conductor.html';
+          const { data, error } = await supabaseClient
+            .from('perfiles')
+            .select('estado_cuenta')
+            .eq('id', user.id)
+            .single();
+
+          if (error || !data || data.estado_cuenta === 'pendiente' || !data.estado_cuenta) {
+            window.location.href = 'registro_cond.html';
+          } else if (data.estado_cuenta === 'aprobado') {
+            window.location.href = 'conductor.html';
+          } else if (data.estado_cuenta === 'suspendido') {
+            mostrarMensaje("Tu cuenta de conductor se encuentra suspendida.", "error");
+          } else {
+            window.location.href = 'registro_cond.html';
+          }
+
+        } catch (err) {
+          console.error("Error al verificar modo conductor:", err);
+          mostrarMensaje("Error de conexión al verificar el perfil.", "error");
         }
       }
     };
@@ -142,7 +156,12 @@
       if (!statusMsg) return;
       statusMsg.textContent = texto;
       statusMsg.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'border-red-200', 'bg-slate-50', 'text-slate-600', 'border-slate-200');
-      statusMsg.classList.add('bg-slate-50', 'text-slate-600', 'border-slate-200');
+      
+      if (tipo === 'error') {
+        statusMsg.classList.add('bg-red-50', 'text-red-600', 'border-red-200');
+      } else {
+        statusMsg.classList.add('bg-slate-50', 'text-slate-600', 'border-slate-200');
+      }
     }
 
     document.addEventListener('contextmenu', e => e.preventDefault());
