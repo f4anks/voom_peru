@@ -75,14 +75,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Manejo de Registro
+  // Manejo de Registro (Sin selector de rol previo)
   if (formRegister) {
     formRegister.addEventListener('submit', async (e) => {
       e.preventDefault();
       const name = document.getElementById('reg-name').value;
       const email = document.getElementById('reg-email').value;
       const password = document.getElementById('reg-password').value;
-      const role = document.querySelector('input[name="role"]:checked')?.value || 'pasajero';
 
       mostrarMensaje("Creando tu cuenta...", "info");
 
@@ -91,7 +90,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           email: email,
           password: password,
           options: {
-            data: { full_name: name, role: role }
+            data: { 
+              full_name: name, 
+              role: 'pasajero' // Rol base unificado para nuevos registros
+            }
           }
         });
 
