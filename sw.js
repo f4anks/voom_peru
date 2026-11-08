@@ -1,14 +1,16 @@
-const CACHE_NAME = 'voom-cache-v4'; // Incrementado a v4 para soportar el nuevo flujo de login y roles
+const CACHE_NAME = 'voom-cache-v4';
 const urlsToCache = [
   './',
   './index.html',
+  './selector.html',
   './manifest.json',
   './js/index.js',
   './js/mapa.js',
   './js/anuncios.js',
+  './js/pasajero.js',
   './js/conductor.js',
+  './pasajero.html',
   './conductor.html',
-  './pasajero_pe.html',
   './registro_conductor.html',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -36,7 +38,7 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Estrategia Network First (Prioriza siempre descargar de la red antes de consultar caché local)
+// Estrategia Network First
 self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request).catch(() => caches.match(event.request))
@@ -44,7 +46,7 @@ self.addEventListener('fetch', event => {
 });
 
 // ==========================================
-// SOPORTE DE NOTIFICACIONES PUSH EN SEGUNDO PLANO
+// NOTIFICACIONES PUSH EN SEGUNDO PLANO
 // ==========================================
 
 self.addEventListener('push', function(event) {
@@ -64,7 +66,7 @@ self.addEventListener('push', function(event) {
     badge: './icons/icon-192.png',
     vibrate: [200, 100, 200],
     data: {
-      url: data.url || './pasajero_pe.html'
+      url: data.url || './pasajero.html'
     }
   };
 
@@ -80,7 +82,7 @@ self.addEventListener('notificationclick', function(event) {
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
       for (let i = 0; i < clientList.length; i++) {
         let client = clientList[i];
-        if (client.url.includes('pasajero_pe.html') || client.url.includes('conductor.html')) {
+        if (client.url.includes('pasajero.html') || client.url.includes('conductor.html')) {
           return client.focus();
         }
       }
