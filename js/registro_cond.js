@@ -75,7 +75,7 @@ async function guardarDatosConductor(event) {
       foto_titulo: urlTitulo,
       foto_vehiculo: urlVehiculo,
       estado_cuenta: 'pendiente',
-      rol: 'conductor' // Garantiza que su perfil quede como conductor registrado
+      rol: 'conductor'
     };
 
     const { error } = await supabaseClient
@@ -88,7 +88,6 @@ async function guardarDatosConductor(event) {
     showMessage("¡Registro y documentos enviados con éxito! Redirigiendo...", "success");
 
     setTimeout(() => {
-      // Al estar pendiente de aprobación, lo mandamos al selector o a una pantalla de espera
       window.location.href = 'selector.html';
     }, 1500);
 
