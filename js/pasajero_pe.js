@@ -15,17 +15,21 @@ document.addEventListener('DOMContentLoaded', () => {
     verificarAnunciosGlobales('pasajero');
   }
   
-  // Inicializar mapa de Perú con coordenadas por defecto de Lima (-12.0464, -77.0428)
+  // 1. Inicializar mapa de Perú (Lima por defecto mientras carga GPS)
   inicializarMapaPeru(-12.0464, -77.0428);
 
+  // 2. Escuchar clics en el mapa para fijar el Destino
   window.onMapaClickCallback = async (lat, lng) => {
     await establecerPuntoDestino(lat, lng);
   };
 
+  // 3. Cargar GPS de entrada + Activar buscadores manuales
   obtenerUbicacionUsuario();
+  inicializarBuscadorOrigenPeru();
   inicializarBuscadorDestinoPeru();
 });
 
+// Cargar Nombre del Usuario
 async function cargarNombreUsuario() {
   const userNameEl = document.getElementById('user-name');
   if (!userNameEl) return;
@@ -61,6 +65,76 @@ async function cargarNombreUsuario() {
   userNameEl.textContent = "Pasajero";
 }
 
+// 📍 BUSCADOR MANUAL DE ORIGEN (Permite cambiar el punto A si el usuario quiere)
+function inicializarBuscadorOrigenPeru() {
+  const inputOrigen = document.getElementById('origen-txt');
+  const contenedorSugerencias = document.getElementById('sugerencias-origen');
+  
+  if (!inputOrigen || !contenedorSugerencias) return;
+
+  let timeoutId;
+
+  inputOrigen.addEventListener('input', (e) => {
+    clearTimeout(timeoutId);
+    const query = e.target.value.trim();
+
+    if (query.length < 3) {
+      contenedorSugerencias.classList.add('hidden');
+      contenedorSugerencias.innerHTML = '';
+      return;
+    }
+
+    timeoutId = setTimeout(async () => {
+      try {
+        const data = await buscarDestinosPeru(query);
+
+        contenedorSugerencias.innerHTML = '';
+
+        if (data && data.length > 0) {
+          data.forEach(lugar => {
+            const item = document.createElement('div');
+            item.className = "px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 cursor-pointer border-b border-slate-100 last:border-none truncate";
+            item.textContent = lugar.display_name;
+
+            item.addEventListener('click', () => {
+              inputOrigen.value = lugar.display_name.split(',')[0]; 
+              contenedorSugerencias.classList.add('hidden');
+              
+              const lat = parseFloat(lugar.lat);
+              const lng = parseFloat(lugar.lon);
+              
+              // Actualizar Origen manual
+              coordsOrigen = { lat, lng };
+              actualizarMarcadorOrigen(lat, lng);
+              centrarMapa(lat, lng, 15);
+
+              // Recalcular precio si el destino ya estaba seleccionado
+              if (coordsDestino) {
+                calcularTarifaViaje();
+              }
+            });
+
+            contenedorSugerencias.appendChild(item);
+          });
+          contenedorSugerencias.classList.remove('hidden');
+        } else {
+          contenedorSugerencias.classList.add('hidden');
+        }
+      } catch (err) {
+        console.error("Error buscando sugerencias de origen:", err);
+      }
+    }, 400);
+  });
+
+  // Ocultar si hace clic fuera
+  document.addEventListener('click', (e) => {
+    if (!inputOrigen.contains(e.target) && !contenedorSugerencias.contains(e.target)) {
+      contenedorSugerencias.classList.add('hidden');
+    }
+  });
+}
+
+// 🏁 BUSCADOR MANUAL DE DESTINO (Punto B)
 function inicializarBuscadorDestinoPeru() {
   const inputDestino = document.getElementById('destino-txt');
   const contenedorSugerencias = document.getElementById('sugerencias-destino');
@@ -122,6 +196,7 @@ function inicializarBuscadorDestinoPeru() {
   });
 }
 
+// Establecer Punto B (Destino)
 async function establecerPuntoDestino(lat, lng, nombrePersonalizado = null) {
   coordsDestino = { lat, lng };
 
@@ -156,11 +231,12 @@ async function establecerPuntoDestino(lat, lng, nombrePersonalizado = null) {
   calcularTarifaViaje();
 }
 
+// 📡 OBTENER GEOLOCALIZACIÓN AUTOMÁTICA DEL USUARIO
 function obtenerUbicacionUsuario() {
   const inputOrigen = document.getElementById('origen-txt');
 
   if (!navigator.geolocation) {
-    if (inputOrigen) inputOrigen.value = "Geolocalización no soportada";
+    if (inputOrigen) inputOrigen.placeholder = "Punto de origen manual...";
     return;
   }
 
@@ -187,14 +263,17 @@ function obtenerUbicacionUsuario() {
       }
     },
     (error) => {
-      let msj = "No se pudo obtener la ubicación";
-      if (error.code === error.PERMISSION_DENIED) msj = "Permiso de GPS denegado";
-      if (inputOrigen) inputOrigen.value = msj;
+      // Si se deniega el GPS, permitimos escribir manualmente sin bloquear la pantalla
+      if (inputOrigen) {
+        inputOrigen.value = "";
+        inputOrigen.placeholder = "Ingresa origen manualmente...";
+      }
     },
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
   );
 }
 
+// 💵 CÁLCULO DE TARIFA Y RUTA
 async function calcularTarifaViaje() {
   if (!coordsOrigen || !coordsDestino) return;
 
@@ -225,6 +304,7 @@ async function calcularTarifaViaje() {
   }
 }
 
+// Distancia lineal Haversine auxiliar
 function calcularDistanciaLineal(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
