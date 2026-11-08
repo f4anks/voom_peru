@@ -3,144 +3,147 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Voladitos - Registro de Conductor</title>
-
+  <title>Voom - Registro de Conductor</title>
+  
   <!-- Metadatos PWA -->
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#f8fafc">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Voladitos">
+  <meta name="apple-mobile-web-app-title" content="Voom">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
   <style>
-    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    body { 
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-user-select: none;
+      user-select: none;
+    }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen flex items-center justify-center p-4 sm:p-6">
+<body class="bg-slate-100 text-slate-800 min-h-screen flex items-center justify-center p-4 sm:p-6 relative">
 
-  <div class="w-full max-w-2xl bg-white rounded-3xl shadow-[0_15px_40px_-15px_rgba(0,0,0,0.08)] border border-slate-200/80 p-8 my-8 relative z-10">
+  <div class="w-full max-w-lg bg-white rounded-3xl shadow-[0_15px_40px_-15px_rgba(0,0,0,0.08)] border border-slate-200/80 p-8 relative z-10 space-y-6">
     
-    <div class="text-center mb-8">
-      <div class="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-tr from-orange-500 to-amber-500 text-white rounded-2xl shadow-lg shadow-orange-500/25 mb-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+    <div class="text-center">
+      <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-tr from-orange-500 via-orange-600 to-amber-500 text-white rounded-2xl shadow-lg shadow-orange-500/25 mb-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
+          <circle cx="7" cy="17" r="2"/>
+          <path d="M9 17h6"/>
+          <circle cx="17" cy="17" r="2"/>
+        </svg>
       </div>
       <h1 class="text-2xl font-black text-slate-900 tracking-tight">Registro de Conductor</h1>
-      <p class="text-xs font-semibold text-slate-500 mt-1">Completa tus datos personales y vehículo para unirte a la flota</p>
+      <p class="text-xs font-bold text-orange-600 mt-1 uppercase tracking-wider">Sube tus documentos y fotos requeridas</p>
     </div>
 
-    <form id="form-registro-conductor" class="space-y-6">
+    <!-- FORMULARIO DE REGISTRO DE CONDUCTOR -->
+    <form id="form-registro-conductor" class="space-y-4">
       
-      <!-- Sección 1: Datos Personales -->
-      <div>
-        <h2 class="text-xs font-black text-orange-600 uppercase tracking-widest mb-3 border-b border-slate-100 pb-1.5">
-          1. Información Personal
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre Completo</label>
-            <input type="text" id="reg-nombre" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" placeholder="Carlos Pérez" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Cédula / Identidad</label>
-            <input type="text" id="reg-cedula" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" placeholder="V-12345678" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de Nacimiento</label>
-            <input type="date" id="reg-fnac" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nro. de Licencia</label>
-            <input type="text" id="reg-licencia" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" placeholder="Licencia de conducir" />
-          </div>
-          <div class="md:col-span-2">
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Carnet de Circulación</label>
-            <input type="text" id="reg-carnet" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" placeholder="Número de carnet de circulación" />
-          </div>
+      <!-- Datos del Vehículo -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Placa del Vehículo</label>
+          <input type="text" id="vehiculo-placa" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. ABC-123" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Modelo / Color</label>
+          <input type="text" id="vehiculo-modelo" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. Aveo Gris" />
         </div>
       </div>
 
-      <!-- Sección 2: Datos del Vehículo -->
-      <div>
-        <h2 class="text-xs font-black text-orange-600 uppercase tracking-widest mb-3 border-b border-slate-100 pb-1.5">
-          2. Especificaciones del Vehículo / Moto
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Placa</label>
-            <input type="text" id="veh-placa" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-bold uppercase text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" placeholder="ABC-123" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Marca</label>
-            <input type="text" id="veh-marca" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" placeholder="Toyota, Honda, Empire..." />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Modelo</label>
-            <input type="text" id="veh-modelo" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" placeholder="Corolla, YBR..." />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Color</label>
-            <input type="text" id="veh-color" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" placeholder="Negro, Azul, Blanco..." />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Año</label>
-            <input type="number" id="veh-anio" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" placeholder="2022" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nro. Título de Propiedad</label>
-            <input type="text" id="veh-titulo" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" placeholder="Número de título" />
-          </div>
+      <hr class="border-slate-100 my-2">
+
+      <!-- Carga de Fotos y Documentos -->
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">Foto de la Cédula (Fte. / Rev.)</label>
+          <input type="file" id="foto-cedula" accept="image/*" required class="w-full text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-slate-200 rounded-2xl p-2 bg-slate-50" />
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">Foto de la Licencia</label>
+          <input type="file" id="foto-licencia" accept="image/*" required class="w-full text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-slate-200 rounded-2xl p-2 bg-slate-50" />
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">Foto del Vehículo de Frente</label>
+          <input type="file" id="foto-vehiculo-frente" accept="image/*" required class="w-full text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-slate-200 rounded-2xl p-2 bg-slate-50" />
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">Foto del Vehículo de Lado Completo</label>
+          <input type="file" id="foto-vehiculo-lado" accept="image/*" required class="w-full text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-slate-200 rounded-2xl p-2 bg-slate-50" />
         </div>
       </div>
 
-      <!-- Sección 3: Carga Multimedia -->
-      <div>
-        <h2 class="text-xs font-black text-orange-600 uppercase tracking-widest mb-3 border-b border-slate-100 pb-1.5">
-          3. Carga Multimedia de Documentos
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Foto de Cédula</label>
-            <input type="file" id="file-cedula" accept="image/*" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 transition-all" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Foto de Licencia</label>
-            <input type="file" id="file-licencia" accept="image/*" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 transition-all" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Foto Carnet Circulación</label>
-            <input type="file" id="file-carnet" accept="image/*" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 transition-all" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Foto Título Vehículo</label>
-            <input type="file" id="file-titulo" accept="image/*" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 transition-all" />
-          </div>
-          <div class="md:col-span-2">
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Foto General del Vehículo / Moto</label>
-            <input type="file" id="file-vehiculo" accept="image/*" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 text-xs text-slate-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 transition-all" />
-          </div>
-        </div>
-      </div>
+      <div id="status-message" class="p-3 rounded-2xl text-xs text-center hidden font-bold border"></div>
 
-      <button type="submit" id="btn-guardar" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-orange-500/25 text-sm tracking-wide active:scale-[0.98]">
-        Guardar Documentación y Enviar a Revisión 🚀
+      <button type="submit" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-orange-500/25 text-sm tracking-wide active:scale-[0.98]">
+        Enviar Documentos para Revisión 🚀
       </button>
-
     </form>
 
-    <div id="status-message" class="mt-4 p-4 rounded-2xl text-xs text-center hidden font-bold border"></div>
-
+    <button onclick="window.location.href='selector.html'" class="w-full text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors pt-1 text-center block">
+      Regresar al Selector de Modo
+    </button>
   </div>
 
-  <script src="js/registro_cond.js"></script>
   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(err => console.error('SW Error:', err));
-      });
-    }
+    const SUPABASE_URL = 'https://gklquvthucityzgcamao.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    document.getElementById('form-registro-conductor').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const statusMsg = document.getElementById('status-message');
+      
+      try {
+        statusMsg.textContent = "Subiendo documentos y registrando datos...";
+        statusMsg.className = "p-3 rounded-2xl text-xs text-center font-bold border bg-slate-50 text-slate-600 border-slate-200";
+        statusMsg.classList.remove('hidden');
+
+        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        if (sessionError || !session) {
+          window.location.href = 'index.html';
+          return;
+        }
+
+        const user = session.user;
+        const placa = document.getElementById('vehiculo-placa').value;
+        const modelo = document.getElementById('vehiculo-modelo').value;
+
+        // Actualizamos el perfil con los datos del vehículo y colocamos el estado en 'pendiente'
+        const { error: updateError } = await supabaseClient
+          .from('perfiles')
+          .update({
+            vehiculo_placa: placa,
+            vehiculo_modelo: modelo,
+            estado_cuenta: 'pendiente'
+          })
+          .eq('id', user.id);
+
+        if (updateError) throw updateError;
+
+        statusMsg.textContent = "¡Documentos enviados con éxito! Redirigiendo...";
+        statusMsg.className = "p-3 rounded-2xl text-xs text-center font-bold border bg-emerald-50 text-emerald-600 border-emerald-200";
+
+        setTimeout(() => {
+          window.location.href = 'conductor.html';
+        }, 1500);
+
+      } catch (err) {
+        console.error("Error al registrar conductor:", err);
+        statusMsg.textContent = "Error al enviar los documentos. Inténtalo de nuevo.";
+        statusMsg.className = "p-3 rounded-2xl text-xs text-center font-bold border bg-red-50 text-red-600 border-red-200";
+      }
+    });
+
+    document.addEventListener('contextmenu', e => e.preventDefault());
   </script>
 </body>
 </html>
