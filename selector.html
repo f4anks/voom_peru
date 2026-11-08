@@ -112,7 +112,6 @@
         try {
           mostrarMensaje("Verificando credenciales de conductor...", "info");
 
-          // Obtenemos la sesión local de manera instantánea sin bloquear la red
           const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
           if (sessionError || !session || !session.user) {
             window.location.href = 'index.html';
@@ -120,7 +119,7 @@
           }
           const user = session.user;
 
-          // Consulta con control de tiempo límite (Timeout de 4 segundos)
+          // Consulta de estatus del perfil con límite de tiempo
           const consultaPerfil = supabaseClient
             .from('perfiles')
             .select('estado_cuenta')
@@ -135,20 +134,21 @@
           try {
             resultado = await Promise.race([consultaPerfil, timeoutSupabase]);
           } catch (timeoutErr) {
-            // Si la base de datos tarda o no responde, lo enviamos al registro de conductor por seguridad
             window.location.href = 'registro_cond.html';
             return;
           }
 
           const { data, error } = resultado;
 
-          // Redirección exacta según el estado de la cuenta
-          if (error || !data || data.estado_cuenta === 'pendiente' || !data.estado_cuenta) {
+          // Validación estricta del flujo:
+          // 1 y 2. Si no hay registro o está pendiente/en revisión, va a 'registro_cond.html' a cargar documentos.
+          // 3 y 4. Solo entra a 'conductor.html' si el admin ya lo aprobó ('aprobado').
+          if (error || !data || !data.estado_cuenta || data.estado_cuenta === 'pendiente') {
             window.location.href = 'registro_cond.html';
           } else if (data.estado_cuenta === 'aprobado') {
             window.location.href = 'conductor.html';
           } else if (data.estado_cuenta === 'suspendido') {
-            mostrarMensaje("Tu cuenta de conductor se encuentra suspendida.", "error");
+            mostrarMensaje("Tu cuenta de conductor se encuentra suspendida por la administración.", "error");
           } else {
             window.location.href = 'registro_cond.html';
           }
