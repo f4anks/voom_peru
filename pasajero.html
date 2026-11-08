@@ -44,18 +44,23 @@
       </div>
     </div>
 
-    <div class="flex items-center space-x-4">
+    <div class="flex items-center space-x-3">
       <div class="flex flex-col text-right">
         <span id="user-name" class="text-xs font-black text-slate-800 leading-tight">Cargando...</span>
         <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Sesión Activa</span>
       </div>
-      <!-- Botón de refresco profundo para aplicar cambios del código fuente -->
-      <button onclick="forceAppUpdate()" class="text-xs bg-slate-100 hover:bg-orange-50 text-slate-600 hover:text-orange-600 font-bold px-4 py-2.5 rounded-xl transition-all border border-slate-200 flex items-center space-x-1 active:scale-95">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-        <span>Refrescar</span>
-      </button>
+
+      <!-- Botón de Refresco (Solo Icono) + Etiqueta de Versión -->
+      <div class="flex items-center space-x-2">
+        <button onclick="forceAppUpdate()" class="p-2 bg-slate-100 hover:bg-orange-50 text-slate-600 hover:text-orange-600 rounded-xl border border-slate-200 transition-all active:scale-95 shadow-xs" title="Refrescar aplicación y borrar caché">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+        <span class="text-[11px] font-black tracking-wider text-orange-600 bg-orange-500/10 px-2.5 py-1 rounded-xl border border-orange-500/20 shadow-xs">
+          V2.2
+        </span>
+      </div>
     </div>
   </header>
 
