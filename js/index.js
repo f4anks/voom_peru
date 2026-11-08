@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session && session.user) {
       const role = session.user.user_metadata?.role || 'pasajero';
-      window.location.href = role === 'conductor' ? 'conductor.html' : 'pasajero.html';
+      window.location.href = role === 'conductor' ? 'conductor.html' : 'pasajero_pe.html';
       return;
     }
   } catch (err) {
@@ -65,10 +65,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const nombreUsuario = data.user.user_metadata?.full_name || email.split('@')[0];
         localStorage.setItem('voom_user_name', nombreUsuario);
 
-        mostrarMensaje("¡Bienvenido a Voom!", "éxito");
+        mostrarMensaje("¡Bienvenido a Voom Perú!", "éxito");
 
         setTimeout(() => {
-          window.location.href = 'pasajero.html';
+          window.location.href = 'pasajero_pe.html';
         }, 1000);
 
       } catch (err) {
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (role === 'conductor') {
             window.location.href = 'conductor.html';
           } else {
-            window.location.href = 'pasajero.html';
+            window.location.href = 'pasajero_pe.html';
           }
         }, 1000);
 
