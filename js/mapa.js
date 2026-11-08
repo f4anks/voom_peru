@@ -83,64 +83,70 @@ function actualizarMarcadorDestino(lat, lng) {
 }
 
 /**
- * Buscador ultraseguro para Venezuela:
- * Filtra por distancia, valida estrictamente el país y descarta por nombre 
- * cualquier país extranjero no deseado (como Colombia, Rumania, Brasil, etc.).
+ * Buscador blindado de alta precisión:
+ * Forzado geográfico para Venezuela + Filtro de 50 km + Exclusión de homónimos internacionales.
  */
 async function buscarDestinosVenezuela(textoBusqueda) {
   if (!textoBusqueda || textoBusqueda.trim().length < 3) return [];
 
   try {
-    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(textoBusqueda)}&countrycodes=ve&addressdetails=1&limit=30`;
+    // Parámetros base: addressdetails=1 y countrycodes=ve
+    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(textoBusqueda)}&countrycodes=ve&addressdetails=1&limit=40`;
 
+    // Si el origen está listo, cerramos el cuadro visual alrededor del usuario (~50km)
     if (latOrigenGlobal && lngOrigenGlobal) {
-      const delta = 0.4; 
+      const delta = 0.45;
       const minLng = lngOrigenGlobal - delta;
       const minLat = latOrigenGlobal - delta;
       const maxLng = lngOrigenGlobal + delta;
       const maxLat = latOrigenGlobal + delta;
 
       url += `&viewbox=${minLng},${maxLat},${maxLng},${minLat}&bounded=1`;
+    } else {
+      // Coordenadas caja límite general de toda Venezuela por si el GPS del origen no ha cargado aún
+      url += `&viewbox=-73.35,12.2,-59.8,0.66&bounded=1`;
     }
 
     const response = await fetch(url);
     const sitios = await response.json();
 
-    if (latOrigenGlobal && lngOrigenGlobal) {
-      return sitios
-        .map(sitio => {
-          const dist = calcularDistanciaHaversine(
+    return sitios
+      .map(sitio => {
+        if (latOrigenGlobal && lngOrigenGlobal) {
+          sitio.distancia_km = calcularDistanciaHaversine(
             latOrigenGlobal, 
             lngOrigenGlobal, 
             parseFloat(sitio.lat), 
             parseFloat(sitio.lon)
           );
-          sitio.distancia_km = dist;
-          return sitio;
-        })
-        .filter(sitio => {
-          const address = sitio.address || {};
-          const countryCode = address.country_code ? address.country_code.toLowerCase() : '';
-          const displayName = (sitio.display_name || '').toLowerCase();
+        } else {
+          sitio.distancia_km = 0;
+        }
+        return sitio;
+      })
+      .filter(sitio => {
+        const address = sitio.address || {};
+        const countryCode = (address.country_code || '').toLowerCase();
+        const countryName = (address.country || '').toLowerCase();
+        const displayName = (sitio.display_name || '').toLowerCase();
 
-          // 1. RECHAZAR si el código de país de la API no es Venezuela
-          if (countryCode && countryCode !== 've') return false;
+        // 1. RECHAZO ABSOLUTO: Si la respuesta no pertenece a Venezuela
+        if (countryCode && countryCode !== 've') return false;
+        if (countryName && !countryName.includes('venezuela') && countryName.length > 0) return false;
 
-          // 2. RECHAZAR palabras clave extranjeras comunes que la API intente colar
-          const terminosExtranjerosProhibidos = ['colombia', 'rumania', 'romania', 'brasil', 'brazil', 'peru', 'ecuador', 'españa', 'united states', 'méxico'];
-          const contieneExtranjero = terminosExtranjerosProhibidos.some(pais => displayName.includes(pais));
-          if (contieneExtranjero) return false;
+        // 2. FILTRO PALABRAS CLAVE EXTRANJERAS
+        const paisesBloqueados = ['brasil', 'brazil', 'italy', 'italia', 'rumania', 'romania', 'colombia', 'peru', 'ecuador', 'verona'];
+        const esExtranjero = paisesBloqueados.some(p => displayName.includes(p));
+        if (esExtranjero && !displayName.includes('venezuela')) return false;
 
-          // 3. RECHAZAR si supera el límite de los 50 km de distancia real
-          if (sitio.distancia_km > DISTANCIA_MAXIMA_KM) return false;
+        // 3. FILTRO DISTANCIA 50 KM (Si el origen está activo)
+        if (latOrigenGlobal && lngOrigenGlobal && sitio.distancia_km > DISTANCIA_MAXIMA_KM) {
+          return false;
+        }
 
-          return true;
-        })
-        // Ordenar del más cercano al más lejano
-        .sort((a, b) => a.distancia_km - b.distancia_km);
-    }
-
-    return sitios;
+        return true;
+      })
+      .sort((a, b) => a.distancia_km - b.distancia_km);
   } catch (error) {
     console.error("Error al buscar sitios cercanos:", error);
     return [];
