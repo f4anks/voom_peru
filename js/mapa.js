@@ -2,7 +2,7 @@ let map;
 let markerOrigen;
 let markerDestino;
 
-// Límite máximo permitido para la ruta en Kilómetros (Ajustable)
+// Límite máximo permitido para la ruta en Kilómetros
 const DISTANCIA_MAXIMA_KM = 50; 
 
 // Coordenadas globales de Origen (Punto A)
@@ -28,7 +28,6 @@ function inicializarMapa(latCentro, lngCentro) {
     const latDest = e.latlng.lat;
     const lngDest = e.latlng.lng;
 
-    // Validar si el punto seleccionado en el mapa excede los kilómetros límite
     if (latOrigenGlobal && lngOrigenGlobal) {
       const distancia = calcularDistanciaHaversine(latOrigenGlobal, lngOrigenGlobal, latDest, lngDest);
       if (distancia > DISTANCIA_MAXIMA_KM) {
@@ -84,44 +83,60 @@ function actualizarMarcadorDestino(lat, lng) {
 }
 
 /**
- * Función para buscar sitios restringidos a VENEZUELA (countrycodes=ve) por ahora.
- * Filtra los resultados para que no superen la distancia límite establecida.
+ * Función para buscar sitios cercanos en VENEZUELA (countrycodes=ve).
+ * Crea una caja de búsqueda (viewbox) alrededor de la ubicación actual del usuario
+ * y restringe estrictamente (bounded=1) los resultados a esa zona y al país.
  */
 async function buscarDestinosVenezuela(textoBusqueda) {
   if (!textoBusqueda || textoBusqueda.trim().length < 3) return [];
 
   try {
-    // Parámetro 'countrycodes=ve' para acotar la búsqueda dentro de Venezuela
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(textoBusqueda)}&countrycodes=ve&limit=10`;
+    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(textoBusqueda)}&countrycodes=ve&limit=10`;
+
+    // Si tenemos la ubicación del usuario, creamos un marco (viewbox) de ~50km alrededor de él
+    if (latOrigenGlobal && lngOrigenGlobal) {
+      const delta = 0.45; // Aproximadamente 50km de margen geográfico
+      const minLng = lngOrigenGlobal - delta;
+      const minLat = latOrigenGlobal - delta;
+      const maxLng = lngOrigenGlobal + delta;
+      const maxLat = latOrigenGlobal + delta;
+
+      // viewbox=left,top,right,bottom & bounded=1 fuerza a que solo busque dentro de esa área cercana
+      url += `&viewbox=${minLng},${maxLat},${maxLng},${minLat}&bounded=1`;
+    }
+
     const response = await fetch(url);
     const sitios = await response.json();
 
-    // Filtrar sitios que respeten el límite de kilómetros si el origen está cargado
+    // Ordenar y filtrar los sitios por distancia exacta desde el origen
     if (latOrigenGlobal && lngOrigenGlobal) {
-      return sitios.filter(sitio => {
-        const dist = calcularDistanciaHaversine(
-          latOrigenGlobal, 
-          lngOrigenGlobal, 
-          parseFloat(sitio.lat), 
-          parseFloat(sitio.lon)
-        );
-        sitio.distancia_km = dist;
-        return dist <= DISTANCIA_MAXIMA_KM;
-      });
+      return sitios
+        .map(sitio => {
+          const dist = calcularDistanciaHaversine(
+            latOrigenGlobal, 
+            lngOrigenGlobal, 
+            parseFloat(sitio.lat), 
+            parseFloat(sitio.lon)
+          );
+          sitio.distancia_km = dist;
+          return sitio;
+        })
+        .filter(sitio => sitio.distancia_km <= DISTANCIA_MAXIMA_KM)
+        .sort((a, b) => a.distancia_km - b.distancia_km); // Ordena los más cercanos primero
     }
 
     return sitios;
   } catch (error) {
-    console.error("Error al buscar sitios en Venezuela:", error);
+    console.error("Error al buscar sitios cercanos:", error);
     return [];
   }
 }
 
 /**
- * Fórmula matemática de Haversine para calcular distancia real en kilómetros
+ * Fórmula matemática de Haversine para calcular distancia en kilómetros
  */
 function calcularDistanciaHaversine(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Radio de la Tierra en km
+  const R = 6371;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLon = (lon2 - lon1) * (Math.PI / 180);
   const a =
