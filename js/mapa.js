@@ -1,6 +1,7 @@
 let map;
 let markerOrigen;
 let markerDestino;
+let markerConductor = null;
 
 // Límite máximo permitido para la ruta en Kilómetros
 const DISTANCIA_MAXIMA_KM = 50; 
@@ -9,16 +10,17 @@ const DISTANCIA_MAXIMA_KM = 50;
 let latOrigenGlobal = null;
 let lngOrigenGlobal = null;
 
-// Inicializar el mapa centrado en Lima, Perú por defecto
+// Inicializar el mapa centrado en Lima, Perú por defecto (Estilo Minimalista/Claro)
 function inicializarMapaPeru(latCentro = -12.0464, lngCentro = -77.0428) {
   latOrigenGlobal = latCentro;
   lngOrigenGlobal = lngCentro;
 
   map = L.map('map', { zoomControl: false }).setView([latCentro, lngCentro], 14);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  // Mapa base limpio, claro y sin saturación de colores (CartoDB Positron)
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 19,
-    attribution: '© OpenStreetMap'
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
   }).addTo(map);
 
   L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -47,16 +49,22 @@ function centrarMapa(lat, lng, zoom = 16) {
   if (map) map.setView([lat, lng], zoom);
 }
 
-// Colocar o actualizar marcador de Origen (Punto A)
+// Colocar o actualizar marcador de Origen (Punto A - Pasajero)
 function actualizarMarcadorOrigen(lat, lng) {
   latOrigenGlobal = lat;
   lngOrigenGlobal = lng;
 
   const iconOrigen = L.divIcon({
     className: 'custom-pin-origen',
-    html: `<div class="w-5 h-5 bg-emerald-500 border-4 border-white rounded-full shadow-lg animate-pulse"></div>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10]
+    html: `
+      <div class="relative flex items-center justify-center">
+        <div class="w-8 h-8 bg-emerald-500 border-4 border-white rounded-full shadow-lg flex items-center justify-center text-white font-black text-xs animate-pulse">
+          📍
+        </div>
+      </div>
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16]
   });
 
   if (markerOrigen) {
@@ -70,15 +78,43 @@ function actualizarMarcadorOrigen(lat, lng) {
 function actualizarMarcadorDestino(lat, lng) {
   const iconDestino = L.divIcon({
     className: 'custom-pin-destino',
-    html: `<div class="w-5 h-5 bg-orange-500 border-4 border-white rounded-full shadow-lg animate-bounce"></div>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10]
+    html: `
+      <div class="relative flex items-center justify-center">
+        <div class="w-8 h-8 bg-orange-500 border-4 border-white rounded-full shadow-lg flex items-center justify-center text-white font-black text-xs animate-bounce">
+          🏁
+        </div>
+      </div>
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16]
   });
 
   if (markerDestino) {
     markerDestino.setLatLng([lat, lng]);
   } else {
     markerDestino = L.marker([lat, lng], { icon: iconDestino }).addTo(map);
+  }
+}
+
+// Colocar o actualizar marcador del Conductor (Vehículo en movimiento)
+function actualizarMarcadorConductor(lat, lng) {
+  const iconConductor = L.divIcon({
+    className: 'custom-pin-conductor',
+    html: `
+      <div class="relative flex items-center justify-center">
+        <div class="w-10 h-10 bg-slate-900 border-4 border-orange-500 rounded-2xl shadow-xl flex items-center justify-center text-white text-base">
+          🚗
+        </div>
+      </div>
+    `,
+    iconSize: [40, 40],
+    iconAnchor: [20, 20]
+  });
+
+  if (markerConductor) {
+    markerConductor.setLatLng([lat, lng]);
+  } else {
+    markerConductor = L.marker([lat, lng], { icon: iconConductor }).addTo(map).bindPopup("<b>Conductor en camino</b>");
   }
 }
 
