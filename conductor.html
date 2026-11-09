@@ -12,10 +12,23 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Voom">
 
+  <!-- Script global para evitar pantalla blanca en iPhone por errores no capturados -->
+  <script>
+    window.onerror = function(msg, url, line) {
+      console.error("Error global atrapado:", msg, "en:", url, ":", line);
+      const panel = document.getElementById('status-panel');
+      if (panel) {
+        panel.className = "p-4 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-800 font-bold text-center";
+        panel.textContent = "Error al iniciar panel: " + msg;
+      }
+      return false;
+    };
+  </script>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
-  <!-- Leaflet CSS & JS (Necesario para el mapa del conductor) -->
+  <!-- Leaflet CSS & JS (Mapa para el conductor) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -61,7 +74,7 @@
       </div>
     </div>
 
-    <!-- Contenedor del Mapa en Vivo (Se oculta si no está aprobado) -->
+    <!-- Contenedor del Mapa en Vivo -->
     <div class="space-y-2">
       <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider">Ubicación Actual</h3>
       <div id="map" class="w-full h-48 rounded-2xl z-0 border border-slate-200 shadow-inner"></div>
@@ -87,7 +100,7 @@
   <script src="js/conductor.js"></script>
   
   <script>
-    // Asignación segura a window para evitar errores si ya están declaradas en otros scripts
+    // Asignación segura a window para evitar errores
     window.SUPABASE_URL = window.SUPABASE_URL || "https://gklquvthucityzgcamao.supabase.co";
     window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM";
     
@@ -138,9 +151,15 @@
       window.location.href = 'index.html';
     };
 
+    // Registro y actualización forzada de Service Worker para limpiar caché antiguo en teléfonos
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(err => console.error('SW Error:', err));
+        navigator.serviceWorker.register('./sw.js', { scope: './' })
+          .then(reg => {
+            // Forzar búsqueda de nueva versión en cada recarga
+            reg.update();
+          })
+          .catch(err => console.error('SW Error:', err));
       });
     }
 
