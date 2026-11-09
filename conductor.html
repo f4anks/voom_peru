@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Voom - Panel de Conductor</title>
+  <title>Voom - Registro de Conductor</title>
   
   <!-- Metadatos PWA -->
   <link rel="manifest" href="./manifest.json">
@@ -12,109 +12,63 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Voom">
 
-  <!-- Estilos base inline para evitar pantalla blanca si falla Tailwind CDN en móvil -->
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 16px; }
-    .card-base { background: #ffffff; border-radius: 24px; padding: 24px; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
-    .status-box { padding: 16px; border-radius: 16px; background: #fff7ed; border: 1px solid #ffedd5; color: #9a3412; font-size: 13px; font-weight: 700; text-align: center; }
-  </style>
-
-  <!-- Capturador de errores temprano para iPhone -->
-  <script>
-    window.onerror = function(msg, url, line) {
-      var panel = document.getElementById('status-panel');
-      if (panel) {
-        panel.style.background = '#fef2f2';
-        panel.style.borderColor = '#fecaca';
-        panel.style.color = '#991b1b';
-        panel.innerHTML = '<b>Error en teléfono:</b> ' + msg + ' (Línea ' + line + ')';
-      }
-      return false;
-    };
-  </script>
-
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 1. PRIMERO: Cargar la librería oficial de Supabase antes de cualquier uso -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
-  <!-- Leaflet CSS & JS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
+  <!-- 2. Tailwind CSS y Fuentes -->
+  <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    body { 
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+  </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col justify-between p-4 sm:p-6">
 
-  <!-- CONTENIDO PRINCIPAL DEL CONDUCTOR -->
-  <div class="card-base space-y-6">
-    
-    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+  <!-- CONTENIDO PRINCIPAL DE REGISTRO -->
+  <div class="w-full max-w-xl mx-auto bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sm:p-8 my-auto space-y-6">
+    <div class="border-b border-slate-100 pb-4">
+      <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Registro de Conductor</h1>
+      <p class="text-xs text-slate-500 font-medium mt-0.5">Sube tus datos y documentos para la revisión del administrador.</p>
+    </div>
+
+    <div id="status-registro" class="p-3 rounded-xl bg-orange-50 border border-orange-200 text-xs text-orange-800 font-bold hidden"></div>
+
+    <!-- Formulario -->
+    <form id="form-registro" class="space-y-4">
       <div>
-        <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Panel de Conductor</h1>
-        <p id="conductor-greeting" class="text-xs font-bold text-orange-600 mt-0.5 uppercase tracking-wider">Cargando estado...</p>
+        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nombre Completo</label>
+        <input type="text" id="nombre_completo" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500">
       </div>
-      <button onclick="window.location.href='selector.html'" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all">
-        Cambiar Modo
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tipo de Servicio</label>
+        <select id="tipo_servicio" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500 bg-white">
+          <option value="moto">Moto Taxi / Reparto</option>
+          <option value="auto">Auto / Taxi</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Placa o Matrícula del Vehículo</label>
+        <input type="text" id="vehiculo_placa" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs uppercase focus:outline-none focus:border-orange-500">
+      </div>
+
+      <button type="submit" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-xs py-3.5 rounded-xl shadow-md transition-transform active:scale-95">
+        Enviar Documentos para Aprobación
       </button>
-    </div>
-
-    <!-- Panel de Estatus y Bloqueo Administrativo -->
-    <div id="status-panel" class="status-box">
-      Verificando estatus de cuenta...
-    </div>
-
-    <div class="space-y-4">
-      <div class="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between">
-        <div>
-          <h3 class="text-xs font-black text-slate-800 uppercase">Estado de Conexión</h3>
-          <p class="text-[11px] text-slate-500 font-medium">Activa tu disponibilidad para recibir solicitudes de viaje</p>
-        </div>
-        <div id="toggle-container"></div>
-      </div>
-    </div>
-
-    <!-- Contenedor del Mapa en Vivo -->
-    <div class="space-y-2">
-      <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider">Ubicación Actual</h3>
-      <div id="map" class="w-full h-48 rounded-2xl z-0 border border-slate-200 shadow-inner"></div>
-    </div>
-
-    <!-- Contenedor de Solicitudes de Viaje -->
-    <div class="space-y-2">
-      <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider">Solicitudes Disponibles</h3>
-      <div id="lista-viajes" class="space-y-3"></div>
-    </div>
-
-    <div id="status-message" class="p-3.5 rounded-2xl text-xs text-center hidden font-bold border"></div>
-
-    <button onclick="cerrarSesion()" class="w-full text-xs font-bold text-slate-400 hover:text-red-500 transition-colors pt-2">
-      Cerrar Sesión de la Cuenta
-    </button>
+    </form>
   </div>
 
-  <!-- Scripts JS independientes cargados al final -->
-  <script src="js/anuncios.js"></script>
-  <script src="js/conductor.js"></script>
-  
+  <!-- Scripts al final -->
+  <script src="js/registro_cond.js"></script>
+
   <script>
-    window.SUPABASE_URL = window.SUPABASE_URL || "https://gklquvthucityzgcamao.supabase.co";
-    window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM";
-
-    window.cerrarSesion = async function() {
-      if (window.supabaseClient) {
-        await window.supabaseClient.auth.signOut();
-      }
-      localStorage.clear();
-      window.location.href = 'index.html';
-    };
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js', { scope: './' })
-          .then(reg => reg.update())
-          .catch(err => console.error('SW Error:', err));
-      });
-    }
-
+    // Protecciones básicas de interfaz
     document.addEventListener('contextmenu', e => e.preventDefault());
   </script>
 </body>
