@@ -9,83 +9,102 @@ let userConductor = null;
 let perfilConductor = null;
 
 window.addEventListener('DOMContentLoaded', async () => {
-  if (window.supabase && window.supabase.createClient) {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  } else {
-    console.error("SDK de Supabase no cargado.");
-    return;
-  }
-
-  // Validar sesión activa
-  const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-  if (authError || !user) {
-    window.location.href = 'index.html';
-    return;
-  }
-
-  userConductor = user;
-  verificarAnunciosGlobales();
-
-  // Consultar perfil del conductor en Supabase
-  const { data: perfil, error } = await supabaseClient
-    .from('perfiles')
-    .select('estado_cuenta, vehiculo_placa, vehiculo_matricula, nombre_completo, tipo_servicio')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  // Validar si completó el formulario de datos del vehículo
-  const tieneVehiculo = perfil && (perfil.vehiculo_placa || perfil.vehiculo_matricula);
-
-  // Si no existe perfil o no ha subido los datos del vehículo/servicio, se envía al registro de conductor
-  if (error || !perfil || !tieneVehiculo) {
-    window.location.href = 'registro_cond.html';
-    return;
-  }
-
-  perfilConductor = perfil;
-
-  const nombreDisplay = perfil.nombre_completo || user.user_metadata?.full_name || user.email.split('@')[0];
-  const elGreeting = document.getElementById('conductor-greeting');
-  if (elGreeting) {
-    elGreeting.textContent = `Hola, ${nombreDisplay}`;
-  }
-
-  // VALIDACIÓN ESTRICTA DE ESTADO:
-  // Si NO está aprobado, bloqueamos el panel y mostramos el mensaje de espera de revisión del admin.
-  if (perfil.estado_cuenta !== 'aprobado') {
-    mostrarPantallaEsperaAprobacion(perfil.estado_cuenta);
-    return;
-  }
-
-  // --- SOLO SI EL ADMIN YA APROBÓ, SE MUESTRA EL PANEL COMPLETO Y EL MAPA ---
-  const statusPanel = document.getElementById('status-panel');
-  if (statusPanel) {
-    statusPanel.textContent = `¡Cuenta Aprobada! Conéctate para recibir solicitudes (${(perfil.tipo_servicio || 'Servicio').toUpperCase()}).`;
-    statusPanel.className = "p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-bold text-center";
-  }
-
-  const mapContainer = document.getElementById('map');
-  if (mapContainer) {
-    map = L.map('map').setView([-12.046374, -77.042793], 13); // Coordenadas por defecto (Perú)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(position => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        map.setView([lat, lng], 15);
-        conductorMarker = L.marker([lat, lng]).addTo(map).bindPopup("<b>Tu Vehículo</b>").openPopup();
-      });
+  try {
+    if (window.supabase && window.supabase.createClient) {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } else {
+      console.error("SDK de Supabase no cargado.");
+      mostrarErrorPantalla("Error crítico: SDK de Supabase no disponible.");
+      return;
     }
-  }
 
-  cargarViajesPendientes();
-  escucharNuevosViajes();
+    // Validar sesión activa
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      window.location.href = 'index.html';
+      return;
+    }
+
+    userConductor = user;
+    
+    if (typeof verificarAnunciosGlobales === 'function') {
+      verificarAnunciosGlobales();
+    }
+
+    // Consultar perfil del conductor en Supabase
+    const { data: perfil, error } = await supabaseClient
+      .from('perfiles')
+      .select('estado_cuenta, vehiculo_placa, vehiculo_matricula, nombre_completo, tipo_servicio')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const tieneVehiculo = perfil && (perfil.vehiculo_placa || perfil.vehiculo_matricula);
+
+    // Si no existe perfil o no ha subido los datos del vehículo/servicio, se envía al registro
+    if (error || !perfil || !tieneVehiculo) {
+      window.location.href = 'registro_cond.html';
+      return;
+    }
+
+    perfilConductor = perfil;
+
+    const nombreDisplay = perfil.nombre_completo || user.user_metadata?.full_name || user.email.split('@')[0];
+    const elGreeting = document.getElementById('conductor-greeting');
+    if (elGreeting) {
+      elGreeting.textContent = `Hola, ${nombreDisplay}`;
+    }
+
+    // VALIDACIÓN ESTRICTA DE ESTADO:
+    if (perfil.estado_cuenta !== 'aprobado') {
+      mostrarPantallaEsperaAprobacion(perfil.estado_cuenta);
+      return;
+    }
+
+    // --- PANEL APROBADO ---
+    const statusPanel = document.getElementById('status-panel');
+    if (statusPanel) {
+      statusPanel.textContent = `¡Cuenta Aprobada! Conéctate para recibir solicitudes (${(perfil.tipo_servicio || 'Servicio').toUpperCase()}).`;
+      statusPanel.className = "p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-bold text-center";
+    }
+
+    // Inicializar Mapa de forma segura
+    const mapContainer = document.getElementById('map');
+    if (mapContainer && typeof L !== 'undefined') {
+      map = L.map('map').setView([-12.046374, -77.042793], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          if (map) {
+            map.setView([lat, lng], 15);
+            conductorMarker = L.marker([lat, lng]).addTo(map).bindPopup("<b>Tu Vehículo</b>").openPopup();
+          }
+        }, () => {}, { timeout: 10000 });
+      }
+    }
+
+    cargarViajesPendientes();
+    escucharNuevosViajes();
+
+  } catch (err) {
+    console.error("Error general en conductor.js:", err);
+    mostrarErrorPantalla("Ocurrió un error al cargar el panel: " + err.message);
+  }
 });
 
-// Pantalla de bloqueo obligatoria mientras el Admin no apruebe (Evita pantalla blanca)
+function mostrarErrorPantalla(mensaje) {
+  const statusPanel = document.getElementById('status-panel');
+  if (statusPanel) {
+    statusPanel.className = "p-4 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-800 font-bold text-center";
+    statusPanel.textContent = mensaje;
+  }
+}
+
+// Pantalla de bloqueo obligatoria mientras el Admin no apruebe
 function mostrarPantallaEsperaAprobacion(estado) {
   const statusPanel = document.getElementById('status-panel');
   const esSuspendido = estado === 'suspendido';
@@ -103,13 +122,13 @@ function mostrarPantallaEsperaAprobacion(estado) {
       <p class="text-xs text-slate-600 leading-relaxed font-medium">
         ${esSuspendido 
           ? 'Tu cuenta se encuentra suspendida por la administración.' 
-          : 'Tus documentos han sido enviados con éxito. Un administrador Voom debe revisar y aprobar tu perfil desde el panel de control antes de que puedas recibir viajes.'}
+          : 'Tus documentos han sido enviados con éxito. Un administrador Voom debe revisar y aprobar tu perfil antes de que puedas recibir viajes.'}
       </p>
       <div class="inline-flex items-center space-x-1.5 text-[10px] bg-orange-100 text-orange-700 font-extrabold px-3 py-1 rounded-full border border-orange-200">
         <span class="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span>
         <span>Pendiente de revisión administrativa</span>
       </div>
-      <div class="pt-2 space-y-2">
+      <div class="pt-2">
         <button onclick="window.location.href='selector.html'" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold py-3 rounded-xl transition-all shadow-md">
           Volver al Selector de Modo
         </button>
@@ -120,12 +139,8 @@ function mostrarPantallaEsperaAprobacion(estado) {
   if (statusPanel) {
     statusPanel.className = "";
     statusPanel.innerHTML = contenidoHTML;
-  } else {
-    const mainContainer = document.querySelector('main') || document.body;
-    mainContainer.innerHTML = `<div class="max-w-md mx-auto p-4">${contenidoHTML}</div>`;
   }
 
-  // Ocultar elementos de conexión y lista de viajes si existen
   const toggleContainer = document.getElementById('toggle-container');
   if (toggleContainer) toggleContainer.innerHTML = '';
   
@@ -133,7 +148,6 @@ function mostrarPantallaEsperaAprobacion(estado) {
   if (listaViajes) listaViajes.innerHTML = '';
 }
 
-// Carga únicamente viajes filtrados por el tipo_servicio del conductor
 async function cargarViajesPendientes() {
   if (!perfilConductor || !perfilConductor.tipo_servicio) return;
 
@@ -177,7 +191,6 @@ function renderizarViajes(viajes) {
   });
 }
 
-// Escuchar únicamente viajes de la misma categoría en tiempo real
 function escucharNuevosViajes() {
   if (!perfilConductor || !perfilConductor.tipo_servicio) return;
 
@@ -206,39 +219,4 @@ async function aceptarViaje(idViaje) {
   }
   alert("🚀 ¡Viaje Aceptado!");
   cargarViajesPendientes();
-}
-
-async function verificarAnunciosGlobales() {
-  try {
-    if (!supabaseClient) return;
-    const { data, error } = await supabaseClient
-      .from('anuncios')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    if (error || !data || data.length === 0) return;
-    const ultimoAnuncio = data[0];
-    const ultimoVistoId = localStorage.getItem('voom_ultimo_anuncio_id_conductor');
-
-    if (String(ultimoVistoId) !== String(ultimoAnuncio.id)) {
-      const modal = document.getElementById('modal-anuncio');
-      const tituloEl = document.getElementById('anuncio-modal-titulo');
-      const mensajeEl = document.getElementById('anuncio-modal-mensaje');
-
-      if (modal && tituloEl && mensajeEl) {
-        tituloEl.textContent = ultimoAnuncio.titulo || "Comunicado Oficial";
-        mensajeEl.textContent = ultimoAnuncio.mensaje || "";
-        modal.classList.remove('hidden');
-        localStorage.setItem('voom_ultimo_anuncio_id_conductor', ultimoAnuncio.id);
-      }
-    }
-  } catch (err) {
-    console.error("Error al obtener anuncios:", err);
-  }
-}
-
-function cerrarModalAnuncio() {
-  const modal = document.getElementById('modal-anuncio');
-  if (modal) modal.classList.add('hidden');
 }
