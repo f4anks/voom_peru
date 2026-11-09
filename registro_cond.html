@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Voom - Registro de Conductor</title>
+  <title>Voom Perú - Registro de Conductor</title>
   
   <!-- Metadatos PWA -->
   <link rel="manifest" href="./manifest.json">
@@ -37,39 +37,62 @@
           <circle cx="17" cy="17" r="2"/>
         </svg>
       </div>
-      <h1 class="text-2xl font-black text-slate-900 tracking-tight">Registro de Conductor</h1>
-      <p class="text-xs font-bold text-orange-600 mt-1 uppercase tracking-wider">Sube tus documentos y fotos legales</p>
+      <h1 class="text-2xl font-black text-slate-900 tracking-tight">Registro de Conductor Perú</h1>
+      <p class="text-xs font-bold text-orange-600 mt-1 uppercase tracking-wider">Información del vehículo y documentos legales</p>
     </div>
 
     <!-- FORMULARIO DE REGISTRO -->
     <form id="form-registro-conductor" class="space-y-4">
       
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Placa del Vehículo</label>
-          <input type="text" id="vehiculo-placa" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. ABC-123" />
+      <!-- Información del Vehículo -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider">Datos del Vehículo</h3>
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Matrícula (Placa)</label>
+            <input type="text" id="vehiculo-matricula" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. ABC-123" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Marca</label>
+            <input type="text" id="vehiculo-marca" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. Toyota" />
+          </div>
         </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Modelo / Color</label>
-          <input type="text" id="vehiculo-modelo" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. Aveo Gris" />
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Modelo</label>
+            <input type="text" id="vehiculo-modelo" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. Yaris" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Color</label>
+            <input type="text" id="vehiculo-color" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. Blanco" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Año</label>
+            <input type="number" id="vehiculo-anio" required min="2000" max="2026" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. 2022" />
+          </div>
         </div>
       </div>
 
       <hr class="border-slate-100 my-2">
 
+      <!-- Documentos Legales de Perú y Fotos del Vehículo -->
       <div class="space-y-3 text-xs">
-        <div>
-          <label class="block font-bold text-slate-600 mb-1">Foto de la Cédula</label>
-          <input type="file" id="foto-cedula" accept="image/*" required class="w-full text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-slate-200 rounded-2xl p-2 bg-slate-50" />
-        </div>
+        <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider">Documentos y Fotografías</h3>
 
         <div>
-          <label class="block font-bold text-slate-600 mb-1">Foto de la Licencia</label>
+          <label class="block font-bold text-slate-600 mb-1">Licencia de Conducir (brevete)</label>
           <input type="file" id="foto-licencia" accept="image/*" required class="w-full text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-slate-200 rounded-2xl p-2 bg-slate-50" />
         </div>
 
         <div>
-          <label class="block font-bold text-slate-600 mb-1">Foto del Vehículo de Frente</label>
+          <label class="block font-bold text-slate-600 mb-1">SOAT / Tarjeta de Propiedad</label>
+          <input type="file" id="foto-soat" accept="image/*" required class="w-full text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-slate-200 rounded-2xl p-2 bg-slate-50" />
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">Foto del Vehículo de Frente (con placa visible)</label>
           <input type="file" id="foto-vehiculo-frente" accept="image/*" required class="w-full text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-slate-200 rounded-2xl p-2 bg-slate-50" />
         </div>
 
@@ -96,7 +119,7 @@
     const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Función auxiliar para comprimir la imagen antes de subirla (reduce peso a menos de 200KB)
+    // Compresor automático de imágenes para reducir peso a pocos KBs
     function comprimirImagen(file, maxWidth = 1000, quality = 0.7) {
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -132,7 +155,7 @@
       const statusMsg = document.getElementById('status-message');
       
       try {
-        statusMsg.textContent = "Comprimiendo y subiendo documentos...";
+        statusMsg.textContent = "Comprimiendo y subiendo documentos legales...";
         statusMsg.className = "p-3 rounded-2xl text-xs text-center font-bold border bg-slate-50 text-slate-600 border-slate-200";
         statusMsg.classList.remove('hidden');
 
@@ -143,28 +166,30 @@
         }
 
         const user = session.user;
-        const placa = document.getElementById('vehiculo-placa').value;
+        const matricula = document.getElementById('vehiculo-matricula').value;
+        const marca = document.getElementById('vehiculo-marca').value;
         const modelo = document.getElementById('vehiculo-modelo').value;
+        const color = document.getElementById('vehiculo-color').value;
+        const anio = document.getElementById('vehiculo-anio').value;
 
-        // Capturar archivos
-        const fileCedula = document.getElementById('foto-cedula').files[0];
+        // Capturar archivos legales de Perú y fotos del vehículo
         const fileLicencia = document.getElementById('foto-licencia').files[0];
+        const fileSoat = document.getElementById('foto-soat').files[0];
         const fileFrente = document.getElementById('foto-vehiculo-frente').files[0];
         const fileLado = document.getElementById('foto-vehiculo-lado').files[0];
 
-        // Subir cada foto comprimida al Storage de Supabase (Bucket llamado 'documentos-conductores')
+        // Función para subir al Storage con compresión
         const subirArchivo = async (file, nombreCampo) => {
           if (!file) return null;
           const blobComprimido = await comprimirImagen(file);
           const fileName = `${user.id}/${nombreCampo}_${Date.now()}.jpg`;
           
-          const { data, error } = await supabaseClient.storage
+          const { error } = await supabaseClient.storage
             .from('documentos-conductores')
             .upload(fileName, blobComprimido, { upsert: true });
 
           if (error) throw error;
 
-          // Obtener URL pública
           const { data: publicUrlData } = supabaseClient.storage
             .from('documentos-conductores')
             .getPublicUrl(fileName);
@@ -172,20 +197,23 @@
           return publicUrlData.publicUrl;
         };
 
-        statusMsg.textContent = "Subiendo fotos a la nube de forma segura...";
-        const urlCedula = await subirArchivo(fileCedula, 'cedula');
-        const urlLicencia = await subirArchivo(fileLicencia, 'licencia');
+        statusMsg.textContent = "Guardando archivos en Supabase de forma segura...";
+        const urlLicencia = await subirArchivo(fileLicencia, 'licencia_peru');
+        const urlSoat = await subirArchivo(fileSoat, 'soat_tarjeta');
         const urlFrente = await subirArchivo(fileFrente, 'vehiculo_frente');
         const urlLado = await subirArchivo(fileLado, 'vehiculo_lado');
 
-        // Actualizar perfil con los enlaces de las fotos y estado pendiente
+        // Actualizar tabla perfiles con los nuevos campos detallados y estado pendiente
         const { error: updateError } = await supabaseClient
           .from('perfiles')
           .update({
-            vehiculo_placa: placa,
+            vehiculo_placa: matricula,
+            vehiculo_marca: marca,
             vehiculo_modelo: modelo,
-            foto_cedula_url: urlCedula,
+            vehiculo_color: color,
+            vehiculo_anio: anio,
             foto_licencia_url: urlLicencia,
+            foto_soat_url: urlSoat,
             foto_vehiculo_frente_url: urlFrente,
             foto_vehiculo_lado_url: urlLado,
             estado_cuenta: 'pendiente'
@@ -201,9 +229,9 @@
           window.location.href = 'conductor.html';
         }, 1500);
 
-      }チャ catch (err) {
+      } catch (err) {
         console.error("Error al registrar conductor:", err);
-        statusMsg.textContent = "Error al enviar los documentos. Asegúrate de crear el Bucket 'documentos-conductores' en Supabase.";
+        statusMsg.textContent = "Error al enviar los documentos. Verifica tu conexión.";
         statusMsg.className = "p-3 rounded-2xl text-xs text-center font-bold border bg-red-50 text-red-600 border-red-200";
       }
     });
