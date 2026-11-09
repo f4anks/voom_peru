@@ -32,7 +32,7 @@
   <div class="w-full max-w-xl mx-auto bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sm:p-8 my-auto space-y-6">
     <div class="border-b border-slate-100 pb-4">
       <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Registro de Conductor</h1>
-      <p class="text-xs text-slate-500 font-medium mt-0.5">Sube tus datos personales, información y los documentos requeridos mediante captura directa.</p>
+      <p class="text-xs text-slate-500 font-medium mt-0.5">Sube tus datos personales, información del vehículo y documentos en tiempo real.</p>
     </div>
 
     <div id="status-registro" class="p-3 rounded-xl bg-orange-50 border border-orange-200 text-xs text-orange-800 font-bold hidden"></div>
@@ -62,32 +62,46 @@
       <!-- 2. Datos del Vehículo -->
       <div class="space-y-3 pt-2">
         <h3 class="text-xs font-black text-orange-600 uppercase tracking-wider">2. Datos del Vehículo</h3>
+        
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tipo de Servicio</label>
             <select id="tipo_servicio" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500 bg-white">
-              <option value="moto">Moto Taxi / Reparto</option>
-              <option value="auto">Auto / Taxi</option>
+              <option value="moto">Moto</option>
+              <option value="economico">Económico</option>
+              <option value="confort">Confort</option>
+              <option value="flete">Flete</option>
+              <option value="grua">Grúa</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Placa o Matrícula</label>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Placa / Matrícula</label>
             <input type="text" id="vehiculo_placa" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs uppercase focus:outline-none focus:border-orange-500" placeholder="ABC-123">
           </div>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Modelo / Marca</label>
-            <input type="text" id="vehiculo_modelo" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500" placeholder="Ej: Honda Wave / Toyota Yaris">
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Marca</label>
+            <input type="text" id="vehiculo_marca" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500" placeholder="Ej: Toyota / Honda">
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Color del Vehículo</label>
-            <input type="text" id="vehiculo_color" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500" placeholder="Ej: Negro / Rojo">
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Modelo</label>
+            <input type="text" id="vehiculo_modelo" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500" placeholder="Ej: Yaris / Wave">
           </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Año</label>
+            <input type="number" id="vehiculo_anio" min="1990" max="2030" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500" placeholder="Ej: 2022">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Color del Vehículo</label>
+          <input type="text" id="vehiculo_color" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500" placeholder="Ej: Negro / Rojo / Blanco">
         </div>
       </div>
 
-      <!-- 3. Documentación y Fotografías por Cámara Directa -->
+      <!-- 3. Documentación y Fotos (Cámara Directa) -->
       <div class="space-y-3 pt-2">
         <h3 class="text-xs font-black text-orange-600 uppercase tracking-wider">3. Documentación y Fotografías (Cámara Directa)</h3>
         
