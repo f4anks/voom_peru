@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Voom - Registro de Conductor</title>
+  <title>Voom - Panel de Conductor</title>
+  
+  <!-- 1. LIBRERÍA DE SUPABASE PRIMERO (Evita el error "supabase is not defined") -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <!-- Metadatos PWA -->
   <link rel="manifest" href="./manifest.json">
@@ -12,11 +15,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Voom">
 
-  <!-- 1. PRIMERO: Cargar la librería oficial de Supabase antes de cualquier uso -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
-  <!-- 2. Tailwind CSS y Fuentes -->
   <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Leaflet CSS & JS (Mapa para el conductor) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <style>
@@ -29,47 +33,135 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col justify-between p-4 sm:p-6">
 
-  <!-- CONTENIDO PRINCIPAL DE REGISTRO -->
-  <div class="w-full max-w-xl mx-auto bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sm:p-8 my-auto space-y-6">
-    <div class="border-b border-slate-100 pb-4">
-      <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Registro de Conductor</h1>
-      <p class="text-xs text-slate-500 font-medium mt-0.5">Sube tus datos y documentos para la revisión del administrador.</p>
+  <!-- CONTENIDO PRINCIPAL DEL CONDUCTOR -->
+  <div class="w-full max-w-2xl mx-auto bg-white rounded-3xl shadow-[0_15px_40px_-15px_rgba(0,0,0,0.08)] border border-slate-200/80 p-6 sm:p-8 my-auto space-y-6">
+    
+    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Panel de Conductor</h1>
+        <p id="conductor-greeting" class="text-xs font-bold text-orange-600 mt-0.5 uppercase tracking-wider">Cargando estado...</p>
+      </div>
+      <button onclick="window.location.href='selector.html'" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all">
+        Cambiar Modo
+      </button>
     </div>
 
-    <div id="status-registro" class="p-3 rounded-xl bg-orange-50 border border-orange-200 text-xs text-orange-800 font-bold hidden"></div>
+    <!-- Panel de Estatus y Bloqueo Administrativo -->
+    <div id="status-panel" class="p-4 rounded-2xl bg-orange-50 border border-orange-200 text-xs text-orange-800 font-bold text-center">
+      Verificando estatus de cuenta...
+    </div>
 
-    <!-- Formulario -->
-    <form id="form-registro" class="space-y-4">
-      <div>
-        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nombre Completo</label>
-        <input type="text" id="nombre_completo" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500">
+    <div class="space-y-4">
+      <div class="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between">
+        <div>
+          <h3 class="text-xs font-black text-slate-800 uppercase">Estado de Conexión</h3>
+          <p class="text-[11px] text-slate-500 font-medium">Activa tu disponibilidad para recibir solicitudes de viaje</p>
+        </div>
+        <div id="toggle-container">
+          <!-- El interruptor o estado se gestionará desde conductor.js -->
+        </div>
       </div>
+    </div>
 
-      <div>
-        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tipo de Servicio</label>
-        <select id="tipo_servicio" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500 bg-white">
-          <option value="moto">Moto Taxi / Reparto</option>
-          <option value="auto">Auto / Taxi</option>
-        </select>
+    <!-- Contenedor del Mapa en Vivo -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider">Ubicación Actual</h3>
+      <div id="map" class="w-full h-48 rounded-2xl z-0 border border-slate-200 shadow-inner"></div>
+    </div>
+
+    <!-- Contenedor de Solicitudes de Viaje en Tiempo Real -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider">Solicitudes Disponibles</h3>
+      <div id="lista-viajes" class="space-y-3">
+        <!-- Las carreras filtradas por tipo_servicio se renderizan aquí dinámicamente -->
       </div>
+    </div>
 
-      <div>
-        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Placa o Matrícula del Vehículo</label>
-        <input type="text" id="vehiculo_placa" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs uppercase focus:outline-none focus:border-orange-500">
-      </div>
+    <div id="status-message" class="p-3.5 rounded-2xl text-xs text-center hidden font-bold border"></div>
 
-      <button type="submit" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-xs py-3.5 rounded-xl shadow-md transition-transform active:scale-95">
-        Enviar Documentos para Aprobación
-      </button>
-    </form>
+    <button onclick="cerrarSesion()" class="w-full text-xs font-bold text-slate-400 hover:text-red-500 transition-colors pt-2">
+      Cerrar Sesión de la Cuenta
+    </button>
   </div>
 
-  <!-- Scripts al final -->
-  <script src="js/registro_cond.js"></script>
-
+  <!-- Scripts JS independientes al final -->
+  <script src="js/anuncios.js"></script>
+  <script src="js/conductor.js"></script>
+  
   <script>
-    // Protecciones básicas de interfaz
+    // Asignación segura a window para evitar errores
+    window.SUPABASE_URL = window.SUPABASE_URL || "https://gklquvthucityzgcamao.supabase.co";
+    window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM";
+    
+    let supabaseClient = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      // Inicializar cliente Supabase global
+      if (window.supabase && window.supabase.createClient) {
+        supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+      }
+
+      if (typeof verificarAnunciosGlobales === 'function') {
+        verificarAnunciosGlobales('conductor');
+      }
+
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        if ('serviceWorker' in navigator) {
+          try {
+            await navigator.serviceWorker.register('/voom_peru/OneSignalSDKWorker.js', {
+              scope: '/voom_peru/'
+            });
+          } catch (e) {
+            console.error("Error al registrar el worker de OneSignal:", e);
+          }
+        }
+
+        await OneSignal.init({
+          appId: "98bfb199-5190-4c51-93b0-2cffb11c79e7",
+          serviceWorkerPath: "OneSignalSDKWorker.js",
+          serviceWorkerParam: { scope: "/voom_peru/" },
+          notifyButton: { enable: false }
+        });
+
+        await OneSignal.User.addTag("rol", "conductores");
+
+        if (!OneSignal.User.PushSubscription.optedIn) {
+          OneSignal.Slidedown.promptPush();
+        }
+      });
+    });
+
+    window.cerrarSesion = async function() {
+      if (supabaseClient) {
+        await supabaseClient.auth.signOut();
+      }
+      localStorage.clear();
+      window.location.href = 'index.html';
+    };
+
+    // Registro y actualización forzada de Service Worker para limpiar caché antiguo en teléfonos
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js', { scope: './' })
+          .then(reg => {
+            reg.update();
+          })
+          .catch(err => console.error('SW Error:', err));
+      });
+    }
+
+    // Protecciones de interfaz
     document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+      if (
+        e.key === 'F12' || 
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || 
+        (e.ctrlKey && e.key === 'U')
+      ) {
+        e.preventDefault();
+      }
+    });
   </script>
 </body>
 </html>
