@@ -14,6 +14,11 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Leaflet CSS & JS (Necesario para el mapa del conductor) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <style>
@@ -39,6 +44,7 @@
       </button>
     </div>
 
+    <!-- Panel de Estatus y Bloqueo Administrativo -->
     <div id="status-panel" class="p-4 rounded-2xl bg-orange-50 border border-orange-200 text-xs text-orange-800 font-bold text-center">
       Verificando estatus de cuenta...
     </div>
@@ -52,6 +58,20 @@
         <div id="toggle-container">
           <!-- El interruptor o estado se gestionará desde conductor.js -->
         </div>
+      </div>
+    </div>
+
+    <!-- Contenedor del Mapa en Vivo (Se oculta si no está aprobado) -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider">Ubicación Actual</h3>
+      <div id="map" class="w-full h-48 rounded-2xl z-0 border border-slate-200 shadow-inner"></div>
+    </div>
+
+    <!-- Contenedor de Solicitudes de Viaje en Tiempo Real -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider">Solicitudes Disponibles</h3>
+      <div id="lista-viajes" class="space-y-3">
+        <!-- Las carreras filtradas por tipo_servicio se renderizan aquí dinámicamente -->
       </div>
     </div>
 
