@@ -6,6 +6,7 @@ let supabaseClient = null;
 let map = null;
 let conductorMarker = null;
 let userConductor = null;
+let perfilConductor = null;
 
 window.addEventListener('DOMContentLoaded', async () => {
   if (window.supabase && window.supabase.createClient) {
@@ -28,15 +29,20 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Consultar perfil del conductor en Supabase
   const { data: perfil, error } = await supabaseClient
     .from('perfiles')
-    .select('estado_cuenta, cedula, vehiculo_placa, nombre_completo')
+    .select('estado_cuenta, vehiculo_placa, vehiculo_matricula, nombre_completo, tipo_servicio')
     .eq('id', user.id)
     .maybeSingle();
 
-  // Si no tiene perfil o no ha subido documentos, va al registro de conductor
-  if (error || !perfil || !perfil.cedula) {
+  // Validar si completó el formulario de datos del vehículo
+  const tieneVehiculo = perfil && (perfil.vehiculo_placa || perfil.vehiculo_matricula);
+
+  // Si no existe perfil o no ha subido los datos del vehículo/servicio, se envía al registro de conductor
+  if (error || !perfil || !tieneVehiculo) {
     window.location.href = 'registro_cond.html';
     return;
   }
+
+  perfilConductor = perfil;
 
   const nombreDisplay = perfil.nombre_completo || user.user_metadata?.full_name || user.email.split('@')[0];
   const elGreeting = document.getElementById('conductor-greeting');
@@ -54,13 +60,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   // --- SOLO SI EL ADMIN YA APROBÓ, SE MUESTRA EL PANEL COMPLETO Y EL MAPA ---
   const statusPanel = document.getElementById('status-panel');
   if (statusPanel) {
-    statusPanel.textContent = "¡Cuenta Aprobada por la Administración! Conéctate para recibir solicitudes.";
+    statusPanel.textContent = `¡Cuenta Aprobada! Conéctate para recibir solicitudes (${(perfil.tipo_servicio || 'Servicio').toUpperCase()}).`;
     statusPanel.className = "p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-bold text-center";
   }
 
   const mapContainer = document.getElementById('map');
   if (mapContainer) {
-    map = L.map('map').setView([10.4806, -66.9036], 13);
+    map = L.map('map').setView([-12.046374, -77.042793], 13); // Coordenadas por defecto (Perú)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
@@ -112,11 +118,15 @@ function mostrarPantallaEsperaAprobacion(estado) {
   if (toggleContainer) toggleContainer.innerHTML = '';
 }
 
+// Carga únicamente viajes filtrados por el tipo_servicio del conductor
 async function cargarViajesPendientes() {
+  if (!perfilConductor || !perfilConductor.tipo_servicio) return;
+
   const { data: viajes, error } = await supabaseClient
     .from('viajes')
     .select('*, perfiles(nombre_completo)')
-    .eq('estado', 'buscando');
+    .eq('estado', 'buscando')
+    .eq('tipo_servicio', perfilConductor.tipo_servicio);
 
   if (error) return;
   renderizarViajes(viajes);
@@ -128,7 +138,8 @@ function renderizarViajes(viajes) {
   contenedor.innerHTML = '';
 
   if (!viajes || viajes.length === 0) {
-    contenedor.innerHTML = '<p class="text-xs text-slate-400 text-center py-4 font-semibold">Esperando nuevas solicitudes de pasajeros...</p>';
+    const servicioNombre = (perfilConductor?.tipo_servicio || 'servicio').toUpperCase();
+    contenedor.innerHTML = `<p class="text-xs text-slate-400 text-center py-4 font-semibold">Esperando nuevas solicitudes de tipo <span class="text-orange-600 font-black">${servicioNombre}</span>...</p>`;
     return;
   }
 
@@ -137,10 +148,13 @@ function renderizarViajes(viajes) {
     item.className = "bg-slate-50 p-4 rounded-2xl border border-slate-200/80 flex justify-between items-center shadow-xs transition-all hover:border-orange-300";
     item.innerHTML = `
       <div>
-        <p class="text-xs font-extrabold text-slate-900">Destino: ${v.destino_direccion}</p>
-        <p class="text-xs font-extrabold text-orange-600 mt-0.5">Tarifa: $${v.precio}</p>
+        <div class="flex items-center space-x-2">
+          <span class="text-[10px] font-black uppercase bg-orange-100 text-orange-700 px-2 py-0.5 rounded-md">${v.tipo_servicio || 'viaje'}</span>
+          <p class="text-xs font-extrabold text-slate-900">Destino: ${v.destino_direccion}</p>
+        </div>
+        <p class="text-xs font-extrabold text-orange-600 mt-1">Tarifa: S/ ${v.precio}</p>
       </div>
-      <button onclick="aceptarViaje('${v.id}')" class="bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-xs px-4 py-2.5 rounded-xl">
+      <button onclick="aceptarViaje('${v.id}')" class="bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-md active:scale-95 transition-transform">
         Aceptar
       </button>
     `;
@@ -148,10 +162,18 @@ function renderizarViajes(viajes) {
   });
 }
 
+// Escuchar únicamente viajes de la misma categoría en tiempo real
 function escucharNuevosViajes() {
+  if (!perfilConductor || !perfilConductor.tipo_servicio) return;
+
   supabaseClient
     .channel('viajes-disponibles')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'viajes' }, () => {
+    .on('postgres_changes', { 
+      event: '*', 
+      schema: 'public', 
+      table: 'viajes',
+      filter: `tipo_servicio=eq.${perfilConductor.tipo_servicio}`
+    }, () => {
       cargarViajesPendientes();
     })
     .subscribe();
