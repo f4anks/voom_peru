@@ -8,15 +8,38 @@ let conductorMarker = null;
 let userConductor = null;
 let perfilConductor = null;
 
+// Función para esperar a que Supabase cargue en móviles con latencia de red
+function esperarSupabase(intentos = 15) {
+  return new Promise((resolve, reject) => {
+    const verificar = (restantes) => {
+      if (window.supabase && window.supabase.createClient) {
+        resolve(window.supabase);
+      } else if (restantes > 0) {
+        setTimeout(() => verificar(restantes - 1), 300);
+      } else {
+        reject(new Error("Supabase SDK no disponible"));
+      }
+    };
+    verificar(intentos);
+  });
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   try {
-    if (window.supabase && window.supabase.createClient) {
-      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    } else {
-      console.error("SDK de Supabase no cargado.");
-      mostrarErrorPantalla("Error crítico: SDK de Supabase no disponible.");
+    const statusPanel = document.getElementById('status-panel');
+    if (statusPanel) statusPanel.textContent = "Conectando con el servidor Voom...";
+
+    let supabaseLib;
+    try {
+      supabaseLib = await esperarSupabase(15);
+    } catch (e) {
+      console.error("SDK de Supabase no cargado a tiempo.");
+      mostrarErrorPantalla("Error de conexión: No se pudo cargar Supabase. Revisa tu red móvil.");
       return;
     }
+
+    supabaseClient = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.supabaseClient = supabaseClient;
 
     // Validar sesión activa
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
@@ -61,31 +84,36 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- PANEL APROBADO ---
-    const statusPanel = document.getElementById('status-panel');
     if (statusPanel) {
       statusPanel.textContent = `¡Cuenta Aprobada! Conéctate para recibir solicitudes (${(perfil.tipo_servicio || 'Servicio').toUpperCase()}).`;
       statusPanel.className = "p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-bold text-center";
     }
 
-    // Inicializar Mapa de forma segura
-    const mapContainer = document.getElementById('map');
-    if (mapContainer && typeof L !== 'undefined') {
-      map = L.map('map').setView([-12.046374, -77.042793], 13);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(map);
+    // Inicializar Mapa con retardo seguro para evitar bloqueos en iPhone (Safari)
+    setTimeout(() => {
+      const mapContainer = document.getElementById('map');
+      if (mapContainer && typeof L !== 'undefined') {
+        try {
+          map = L.map('map', { zoomControl: false }).setView([-12.046374, -77.042793], 13);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+          }).addTo(map);
 
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(position => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          if (map) {
-            map.setView([lat, lng], 15);
-            conductorMarker = L.marker([lat, lng]).addTo(map).bindPopup("<b>Tu Vehículo</b>").openPopup();
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(position => {
+              const lat = position.coords.latitude;
+              const lng = position.coords.longitude;
+              if (map) {
+                map.setView([lat, lng], 15);
+                conductorMarker = L.marker([lat, lng]).addTo(map).bindPopup("<b>Tu Vehículo</b>");
+              }
+            }, () => {}, { timeout: 10000, enableHighAccuracy: true });
           }
-        }, () => {}, { timeout: 10000 });
+        } catch (mapErr) {
+          console.warn("Mapa omitido temporalmente en móvil:", mapErr);
+        }
       }
-    }
+    }, 400);
 
     cargarViajesPendientes();
     escucharNuevosViajes();
