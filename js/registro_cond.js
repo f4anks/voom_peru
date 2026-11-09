@@ -1,133 +1,216 @@
-const SUPABASE_URL = 'https://gklquvthucityzgcamao.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// CONFIGURACIÓN DE SUPABASE
+const SUPABASE_URL = "https://gklquvthucityzgcamao.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM";
 
-document.addEventListener('DOMContentLoaded', async () => {
-  // Validar sesión activa
+let supabaseClient = null;
+let currentUser = null;
+
+// Esperar disponibilidad del SDK de Supabase
+function esperarSupabase(intentos = 15) {
+  return new Promise((resolve, reject) => {
+    const verificar = (restantes) => {
+      if (window.supabase && window.supabase.createClient) {
+        resolve(window.supabase);
+      } else if (restantes > 0) {
+        setTimeout(() => verificar(restantes - 1), 300);
+      } else {
+        reject(new Error("SDK Supabase no disponible"));
+      }
+    };
+    verificar(intentos);
+  });
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  const statusBox = document.getElementById('status-registro');
+
   try {
-    const { data: { session }, error } = await supabaseClient.auth.getSession();
-    if (error || !session) {
+    const supabaseLib = await esperarSupabase();
+    supabaseClient = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const { data: { user }, error } = await supabaseClient.auth.getUser();
+    if (error || !user) {
       window.location.href = 'index.html';
       return;
     }
+    currentUser = user;
+
+    // Cargar nombre predeterminado si existe en la sesión
+    const elNombre = document.getElementById('nombre_completo');
+    if (elNombre && !elNombre.value) {
+      elNombre.value = user.user_metadata?.full_name || '';
+    }
+
   } catch (err) {
-    console.error("Error al verificar sesión:", err);
-    window.location.href = 'index.html';
-    return;
+    mostrarMensaje('Error de conexión con la base de datos: ' + err.message, true);
   }
 
-  const formRegistro = document.getElementById('form-registro-conductor');
-  if (formRegistro) {
-    formRegistro.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      mostrarMensaje("Subiendo documentos y registrando datos...", "info");
-
-      try {
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (!session) {
-          window.location.href = 'index.html';
-          return;
-        }
-        const user = session.user;
-
-        // Función auxiliar para subir archivos al Storage de Supabase (Bucket: 'documentos')
-        async function subirArchivo(fileInputId, nombreCarpeta) {
-          const fileInput = document.getElementById(fileInputId);
-          if (!fileInput || !fileInput.files || fileInput.files.length === 0) return null;
-          
-          const file = fileInput.files[0];
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${user.id}/${nombreCarpeta}_${Date.now()}.${fileExt}`;
-          
-          const { error: uploadError } = await supabaseClient.storage
-            .from('documentos')
-            .upload(fileName, file, { upsert: true });
-
-          if (uploadError) {
-            throw new Error(`Error al subir ${nombreCarpeta}: ${uploadError.message}`);
-          }
-
-          // Obtener la URL pública del archivo subido
-          const { data: { publicUrl } } = supabaseClient.storage
-            .from('documentos')
-            .getPublicUrl(fileName);
-
-          return publicUrl;
-        }
-
-        // Subir las 5 imágenes requeridas
-        const fotoCedula = await subirArchivo('file-cedula', 'cedula');
-        const fotoLicencia = await subirArchivo('file-licencia', 'licencia');
-        const fotoCarnet = await subirArchivo('file-carnet', 'carnet');
-        const fotoTitulo = await subirArchivo('file-titulo', 'titulo');
-        const fotoVehiculo = await subirArchivo('file-vehiculo', 'vehiculo');
-
-        // Capturar los valores de los inputs de texto y fecha
-        const nombre_completo = document.getElementById('reg-nombre').value.trim();
-        const cedula = document.getElementById('reg-cedula').value.trim();
-        const fecha_nacimiento = document.getElementById('reg-fnac').value;
-        const licencia = document.getElementById('reg-licencia').value.trim();
-        const carnet = document.getElementById('reg-carnet').value.trim();
-
-        const vehiculo_placa = document.getElementById('veh-placa').value.trim().toUpperCase();
-        const vehiculo_marca = document.getElementById('veh-marca').value.trim();
-        const vehiculo_modelo = document.getElementById('veh-modelo').value.trim();
-        const vehiculo_color = document.getElementById('veh-color').value.trim();
-        const vehiculo_anio = parseInt(document.getElementById('veh-anio').value) || null;
-        const vehiculo_titulo = document.getElementById('veh-titulo').value.trim();
-
-        // Actualizar el perfil del usuario en Supabase con todos sus datos y estatus pendiente
-        const { error: updateError } = await supabaseClient
-          .from('perfiles')
-          .update({
-            nombre_completo,
-            cedula,
-            fecha_nacimiento,
-            licencia,
-            carnet,
-            vehiculo_placa,
-            vehiculo_marca,
-            vehiculo_modelo,
-            vehiculo_color,
-            vehiculo_anio,
-            vehiculo_titulo,
-            foto_cedula: fotoCedula,
-            foto_licencia: fotoLicencia,
-            foto_carnet: fotoCarnet,
-            foto_titulo: fotoTitulo,
-            foto_vehiculo: fotoVehiculo,
-            rol: 'conductor',
-            estado_cuenta: 'pendiente'
-          })
-          .eq('id', user.id);
-
-        if (updateError) throw updateError;
-
-        mostrarMensaje("¡Documentación enviada con éxito! Redirigiendo...", "exito");
-
-        setTimeout(() => {
-          window.location.href = 'selector.html';
-        }, 1500);
-
-      } catch (err) {
-        console.error("Error al registrar conductor:", err);
-        mostrarMensaje(err.message || "Ocurrió un error al procesar el registro.", "error");
-      }
-    });
+  const form = document.getElementById('form-registro');
+  if (form) {
+    form.addEventListener('submit', procesarRegistro);
   }
 });
 
-function mostrarMensaje(texto, tipo) {
-  const statusMsg = document.getElementById('status-message');
-  if (!statusMsg) return;
-  statusMsg.textContent = texto;
-  statusMsg.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'border-red-200', 'bg-emerald-50', 'text-emerald-600', 'border-emerald-200', 'bg-orange-50', 'text-orange-600', 'border-orange-200');
+// Función de compresión de fotos para acelerar la subida móvil
+function comprimirImagen(file, maxWidth = 1000, quality = 0.7) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
 
-  if (tipo === 'error') {
-    statusMsg.classList.add('bg-red-50', 'text-red-600', 'border-red-200');
-  } else if (tipo === 'exito') {
-    statusMsg.classList.add('bg-emerald-50', 'text-emerald-600', 'border-emerald-200');
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error("Error al comprimir la imagen"));
+          }
+        }, 'image/jpeg', quality);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+}
+
+// Subir un archivo al Storage de Supabase
+async function subirArchivoStorage(fileInputId, carpetaNombre) {
+  const input = document.getElementById(fileInputId);
+  if (!input || !input.files || input.files.length === 0) return null;
+
+  const archivoOriginal = input.files[0];
+  mostrarMensaje(`Procesando y subiendo: ${carpetaNombre}...`);
+
+  // Comprimir foto si es formato de imagen
+  let blobFinal = archivoOriginal;
+  if (archivoOriginal.type.startsWith('image/')) {
+    blobFinal = await comprimirImagen(archivoOriginal);
+  }
+
+  const extension = 'jpg';
+  const filePath = `conductores/${currentUser.id}/${carpetaNombre}_${Date.now()}.${extension}`;
+
+  const { data, error } = await supabaseClient
+    .storage
+    .from('documentos')
+    .upload(filePath, blobFinal, {
+      contentType: 'image/jpeg',
+      upsert: true
+    });
+
+  if (error) {
+    throw new Error(`Error al subir ${carpetaNombre}: ${error.message}`);
+  }
+
+  const { data: publicUrlData } = supabaseClient
+    .storage
+    .from('documentos')
+    .getPublicUrl(filePath);
+
+  return publicUrlData.publicUrl;
+}
+
+async function procesarRegistro(e) {
+  e.preventDefault();
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerText = 'Subiendo fotos y guardando...';
+  }
+
+  try {
+    mostrarMensaje('Subiendo documentación y fotografías capturadas...');
+
+    // 1. Subir archivos a Supabase Storage
+    const urlBrevete = await subirArchivoStorage('foto_brevete', 'brevete');
+    const urlCarta = await subirArchivoStorage('foto_carta_conducta', 'carta_conducta');
+    const urlTitulo = await subirArchivoStorage('foto_titulo_vehiculo', 'titulo_vehiculo');
+    const urlFrontal = await subirArchivoStorage('foto_frontal', 'foto_frontal');
+    const urlLateral = await subirArchivoStorage('foto_lateral', 'foto_lateral');
+
+    // 2. Recopilar todos los campos de texto
+    const nombreCompleto = document.getElementById('nombre_completo').value.trim();
+    const dni = document.getElementById('dni').value.trim();
+    const telefono = document.getElementById('telefono').value.trim();
+    const tipoServicio = document.getElementById('tipo_servicio').value;
+    const placa = document.getElementById('vehiculo_placa').value.trim().toUpperCase();
+    const marca = document.getElementById('vehiculo_marca').value.trim();
+    const modelo = document.getElementById('vehiculo_modelo').value.trim();
+    const anio = parseInt(document.getElementById('vehiculo_anio').value, 10);
+    const color = document.getElementById('vehiculo_color').value.trim();
+
+    mostrarMensaje('Guardando datos del perfil...');
+
+    // 3. Actualizar la tabla `perfiles` en Supabase
+    const { error: updateError } = await supabaseClient
+      .from('perfiles')
+      .update({
+        nombre_completo: nombreCompleto,
+        dni: dni,
+        telefono: telefono,
+        tipo_servicio: tipoServicio,
+        vehiculo_placa: placa,
+        vehiculo_marca: marca,
+        vehiculo_modelo: modelo,
+        vehiculo_anio: anio,
+        vehiculo_color: color,
+        url_foto_brevete: urlBrevete,
+        url_foto_carta_conducta: urlCarta,
+        url_foto_titulo_vehiculo: urlTitulo,
+        url_foto_frontal: urlFrontal,
+        url_foto_lateral: urlLateral,
+        estado_cuenta: 'pendiente', // Deja la cuenta en espera de aprobación
+        updated_at: new Date()
+      })
+      .eq('id', currentUser.id);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    mostrarMensaje('✅ ¡Registro completado con éxito! Redirigiendo...', false);
+    
+    setTimeout(() => {
+      window.location.href = 'index_status.html';
+    }, 1200);
+
+  } catch (err) {
+    console.error('Error durante el registro:', err);
+    mostrarMensaje('❌ No se pudo completar el registro: ' + err.message, true);
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = 'Enviar Datos y Documentos para Aprobación';
+    }
+  }
+}
+
+function mostrarMensaje(texto, esError = false) {
+  const box = document.getElementById('status-registro');
+  if (!box) return;
+
+  box.classList.remove('hidden');
+  box.textContent = texto;
+
+  if (esError) {
+    box.className = "p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 font-bold";
   } else {
-    statusMsg.classList.add('bg-orange-50', 'text-orange-600', 'border-orange-200');
+    box.className = "p-3 rounded-xl bg-orange-50 border border-orange-200 text-xs text-orange-800 font-bold";
   }
 }
