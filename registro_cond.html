@@ -37,13 +37,33 @@
           <circle cx="17" cy="17" r="2"/>
         </svg>
       </div>
-      <h1 class="text-2xl font-black text-slate-900 tracking-tight">Registro de Conductor Perú</h1>
-      <p class="text-xs font-bold text-orange-600 mt-1 uppercase tracking-wider">Información del vehículo y documentos legales</p>
+      <h1 class="text-2xl font-black text-slate-900 tracking-tight">Registro de Conductor</h1>
+      <p class="text-xs font-bold text-orange-600 mt-1 uppercase tracking-wider">Tipo de servicio y datos del vehículo</p>
     </div>
 
     <!-- FORMULARIO DE REGISTRO -->
-    <form id="form-registro-conductor" class="space-y-4">
+    <form id="form-registro-conductor" class="space-y-5">
       
+      <!-- Selector de Tipo de Servicio -->
+      <div class="space-y-2">
+        <label class="block text-xs font-black text-slate-700 uppercase tracking-wider">Categoría / Tipo de Servicio</label>
+        <div class="relative">
+          <select id="tipo-servicio" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white appearance-none transition-all">
+            <option value="" disabled selected>Selecciona tu tipo de servicio...</option>
+            <option value="moto">🛵 Moto (Traslados rápidos / Delivery)</option>
+            <option value="economico">🚗 Económico (Autos sin aire acondicionado)</option>
+            <option value="confort">🚘 Confort (Autos modernos con aire acondicionado)</option>
+            <option value="flete">🛻 Flete / Carga (Camionetas Pickup)</option>
+            <option value="grua">🏗️ Grúa (Remolque / Auxilio mecánico)</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+            <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <hr class="border-slate-100">
+
       <!-- Información del Vehículo -->
       <div class="space-y-3">
         <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider">Datos del Vehículo</h3>
@@ -55,34 +75,34 @@
           </div>
           <div>
             <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Marca</label>
-            <input type="text" id="vehiculo-marca" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. Toyota" />
+            <input type="text" id="vehiculo-marca" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. Toyota / Honda" />
           </div>
         </div>
 
         <div class="grid grid-cols-3 gap-3">
           <div>
             <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Modelo</label>
-            <input type="text" id="vehiculo-modelo" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. Yaris" />
+            <input type="text" id="vehiculo-modelo" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. Yaris / CB190" />
           </div>
           <div>
             <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Color</label>
-            <input type="text" id="vehiculo-color" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. Blanco" />
+            <input type="text" id="vehiculo-color" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. Negro" />
           </div>
           <div>
             <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Año</label>
-            <input type="number" id="vehiculo-anio" required min="2000" max="2026" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. 2022" />
+            <input type="number" id="vehiculo-anio" required min="1995" max="2026" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-orange-500 focus:bg-white" placeholder="Ej. 2022" />
           </div>
         </div>
       </div>
 
-      <hr class="border-slate-100 my-2">
+      <hr class="border-slate-100">
 
       <!-- Documentos Legales de Perú y Fotos del Vehículo -->
       <div class="space-y-3 text-xs">
         <h3 class="text-xs font-black text-slate-700 uppercase tracking-wider">Documentos y Fotografías</h3>
 
         <div>
-          <label class="block font-bold text-slate-600 mb-1">Licencia de Conducir (brevete)</label>
+          <label class="block font-bold text-slate-600 mb-1">Licencia de Conducir (Brevete)</label>
           <input type="file" id="foto-licencia" accept="image/*" required class="w-full text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-slate-200 rounded-2xl p-2 bg-slate-50" />
         </div>
 
@@ -92,7 +112,7 @@
         </div>
 
         <div>
-          <label class="block font-bold text-slate-600 mb-1">Foto del Vehículo de Frente (con placa visible)</label>
+          <label class="block font-bold text-slate-600 mb-1">Foto del Vehículo de Frente (placa visible)</label>
           <input type="file" id="foto-vehiculo-frente" accept="image/*" required class="w-full text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-slate-200 rounded-2xl p-2 bg-slate-50" />
         </div>
 
@@ -119,7 +139,7 @@
     const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Compresor automático de imágenes para reducir peso a pocos KBs
+    // Compresor de imágenes en navegador
     function comprimirImagen(file, maxWidth = 1000, quality = 0.7) {
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -155,7 +175,7 @@
       const statusMsg = document.getElementById('status-message');
       
       try {
-        statusMsg.textContent = "Comprimiendo y subiendo documentos legales...";
+        statusMsg.textContent = "Comprimiendo y procesando fotos legales...";
         statusMsg.className = "p-3 rounded-2xl text-xs text-center font-bold border bg-slate-50 text-slate-600 border-slate-200";
         statusMsg.classList.remove('hidden');
 
@@ -166,19 +186,20 @@
         }
 
         const user = session.user;
+        const tipoServicio = document.getElementById('tipo-servicio').value;
         const matricula = document.getElementById('vehiculo-matricula').value;
         const marca = document.getElementById('vehiculo-marca').value;
         const modelo = document.getElementById('vehiculo-modelo').value;
         const color = document.getElementById('vehiculo-color').value;
         const anio = document.getElementById('vehiculo-anio').value;
 
-        // Capturar archivos legales de Perú y fotos del vehículo
+        // Archivos
         const fileLicencia = document.getElementById('foto-licencia').files[0];
         const fileSoat = document.getElementById('foto-soat').files[0];
         const fileFrente = document.getElementById('foto-vehiculo-frente').files[0];
         const fileLado = document.getElementById('foto-vehiculo-lado').files[0];
 
-        // Función para subir al Storage con compresión
+        // Subida al Storage
         const subirArchivo = async (file, nombreCampo) => {
           if (!file) return null;
           const blobComprimido = await comprimirImagen(file);
@@ -197,16 +218,17 @@
           return publicUrlData.publicUrl;
         };
 
-        statusMsg.textContent = "Guardando archivos en Supabase de forma segura...";
+        statusMsg.textContent = "Subiendo fotos al servidor seguro...";
         const urlLicencia = await subirArchivo(fileLicencia, 'licencia_peru');
         const urlSoat = await subirArchivo(fileSoat, 'soat_tarjeta');
         const urlFrente = await subirArchivo(fileFrente, 'vehiculo_frente');
         const urlLado = await subirArchivo(fileLado, 'vehiculo_lado');
 
-        // Actualizar tabla perfiles con los nuevos campos detallados y estado pendiente
+        // Actualizar perfiles guardando tipo_servicio
         const { error: updateError } = await supabaseClient
           .from('perfiles')
           .update({
+            tipo_servicio: tipoServicio,
             vehiculo_placa: matricula,
             vehiculo_marca: marca,
             vehiculo_modelo: modelo,
@@ -222,7 +244,7 @@
 
         if (updateError) throw updateError;
 
-        statusMsg.textContent = "¡Documentos enviados con éxito! Redirigiendo...";
+        statusMsg.textContent = "¡Documentos y servicio registrados con éxito! Redirigiendo...";
         statusMsg.className = "p-3 rounded-2xl text-xs text-center font-bold border bg-emerald-50 text-emerald-600 border-emerald-200";
 
         setTimeout(() => {
@@ -231,7 +253,7 @@
 
       } catch (err) {
         console.error("Error al registrar conductor:", err);
-        statusMsg.textContent = "Error al enviar los documentos. Verifica tu conexión.";
+        statusMsg.textContent = "Error al enviar los datos. Inténtalo nuevamente.";
         statusMsg.className = "p-3 rounded-2xl text-xs text-center font-bold border bg-red-50 text-red-600 border-red-200";
       }
     });
