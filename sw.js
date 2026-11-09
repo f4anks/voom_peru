@@ -1,4 +1,4 @@
-const CACHE_NAME = 'voom-cache-v5';
+const CACHE_NAME = 'voom-cache-v6'; // <--- Incrementado a v6
 const urlsToCache = [
   './',
   './index.html',
@@ -32,7 +32,8 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cache => {
           if (cache !== CACHE_NAME) {
-            return caches.delete(cache); // Elimina cachés antiguos
+            console.log('Eliminando caché antiguo:', cache);
+            return caches.delete(cache); // Elimina cachés de versiones anteriores (v1, v2, v3, v4, v5)
           }
         })
       );
@@ -40,10 +41,27 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Estrategia Network First
+// Estrategia Network First robusta (Busca red fresca primero, actualiza caché y si falla usa respaldo)
 self.addEventListener('fetch', event => {
+  // Ignorar peticiones que no sean GET (como llamadas a Supabase o API externas)
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
+    fetch(event.request)
+      .then(networkResponse => {
+        // Si la red responde correctamente, clonamos la respuesta fresca y la guardamos en caché
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        // Si no hay red (offline), buscamos en el caché
+        return caches.match(event.request);
+      })
   );
 });
 
