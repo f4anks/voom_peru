@@ -8,7 +8,7 @@ let conductorMarker = null;
 let userConductor = null;
 let perfilConductor = null;
 
-// Función para esperar a que Supabase cargue en móviles con latencia de red
+// Función para esperar la carga del SDK de Supabase en móviles
 function esperarSupabase(intentos = 15) {
   return new Promise((resolve, reject) => {
     const verificar = (restantes) => {
@@ -34,7 +34,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       supabaseLib = await esperarSupabase(15);
     } catch (e) {
       console.error("SDK de Supabase no cargado a tiempo.");
-      mostrarErrorPantalla("Error de conexión: No se pudo cargar Supabase. Revisa tu red móvil.");
+      mostrarErrorPantalla("Error de conexión: No se pudo cargar Supabase. Revisa tu red.");
       return;
     }
 
@@ -51,7 +51,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     userConductor = user;
     
     if (typeof verificarAnunciosGlobales === 'function') {
-      verificarAnunciosGlobales();
+      verificarAnunciosGlobales('conductor');
     }
 
     // Consultar perfil del conductor en Supabase
@@ -63,9 +63,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     const tieneVehiculo = perfil && (perfil.vehiculo_placa || perfil.vehiculo_matricula);
 
-    // Si no existe perfil o no ha subido los datos del vehículo/servicio, se envía al registro
+    // Si no existe perfil o no ha subido los datos del vehículo, enviar al registro
     if (error || !perfil || !tieneVehiculo) {
       window.location.href = 'registro_cond.html';
+      return;
+    }
+
+    // Si la cuenta no está aprobada o está suspendida, enviar a la pantalla de estado dedicada
+    if (perfil.estado_cuenta !== 'aprobado') {
+      window.location.href = 'index_status.html';
       return;
     }
 
@@ -77,22 +83,16 @@ window.addEventListener('DOMContentLoaded', async () => {
       elGreeting.textContent = `Hola, ${nombreDisplay}`;
     }
 
-    // VALIDACIÓN ESTRICTA DE ESTADO:
-    if (perfil.estado_cuenta !== 'aprobado') {
-      mostrarPantallaEsperaAprobacion(perfil.estado_cuenta);
-      return;
-    }
-
     // --- PANEL APROBADO ---
     if (statusPanel) {
       statusPanel.textContent = `¡Cuenta Aprobada! Conéctate para recibir solicitudes (${(perfil.tipo_servicio || 'Servicio').toUpperCase()}).`;
       statusPanel.className = "p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-bold text-center";
     }
 
-    // Inicializar Mapa con retardo seguro para evitar bloqueos en iPhone (Safari)
+    // Inicializar Mapa de forma segura
     setTimeout(() => {
       const mapContainer = document.getElementById('map');
-      if (mapContainer && typeof L !== 'undefined') {
+      if (mapContainer && typeof L !== 'undefined' && !map) {
         try {
           map = L.map('map', { zoomControl: false }).setView([-12.046374, -77.042793], 13);
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -110,7 +110,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             }, () => {}, { timeout: 10000, enableHighAccuracy: true });
           }
         } catch (mapErr) {
-          console.warn("Mapa omitido temporalmente en móvil:", mapErr);
+          console.warn("Mapa omitido temporamente:", mapErr);
         }
       }
     }, 400);
@@ -130,50 +130,6 @@ function mostrarErrorPantalla(mensaje) {
     statusPanel.className = "p-4 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-800 font-bold text-center";
     statusPanel.textContent = mensaje;
   }
-}
-
-// Pantalla de bloqueo obligatoria mientras el Admin no apruebe
-function mostrarPantallaEsperaAprobacion(estado) {
-  const statusPanel = document.getElementById('status-panel');
-  const esSuspendido = estado === 'suspendido';
-
-  const contenidoHTML = `
-    <div class="p-6 rounded-2xl bg-orange-50 border border-orange-200 text-center space-y-3 shadow-sm my-4">
-      <div class="inline-flex items-center justify-center w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl shadow-xs animate-pulse mx-auto">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </div>
-      <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider">
-        ${esSuspendido ? 'Cuenta Suspendida' : 'Esperando Aprobación del Administrador'}
-      </h3>
-      <p class="text-xs text-slate-600 leading-relaxed font-medium">
-        ${esSuspendido 
-          ? 'Tu cuenta se encuentra suspendida por la administración.' 
-          : 'Tus documentos han sido enviados con éxito. Un administrador Voom debe revisar y aprobar tu perfil antes de que puedas recibir viajes.'}
-      </p>
-      <div class="inline-flex items-center space-x-1.5 text-[10px] bg-orange-100 text-orange-700 font-extrabold px-3 py-1 rounded-full border border-orange-200">
-        <span class="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span>
-        <span>Pendiente de revisión administrativa</span>
-      </div>
-      <div class="pt-2">
-        <button onclick="window.location.href='selector.html'" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold py-3 rounded-xl transition-all shadow-md">
-          Volver al Selector de Modo
-        </button>
-      </div>
-    </div>
-  `;
-
-  if (statusPanel) {
-    statusPanel.className = "";
-    statusPanel.innerHTML = contenidoHTML;
-  }
-
-  const toggleContainer = document.getElementById('toggle-container');
-  if (toggleContainer) toggleContainer.innerHTML = '';
-  
-  const listaViajes = document.getElementById('lista-viajes');
-  if (listaViajes) listaViajes.innerHTML = '';
 }
 
 async function cargarViajesPendientes() {
