@@ -85,37 +85,52 @@ window.addEventListener('DOMContentLoaded', async () => {
   escucharNuevosViajes();
 });
 
-// Pantalla de bloqueo obligatoria mientras el Admin no apruebe
+// Pantalla de bloqueo obligatoria mientras el Admin no apruebe (Evita pantalla blanca)
 function mostrarPantallaEsperaAprobacion(estado) {
   const statusPanel = document.getElementById('status-panel');
-  if (!statusPanel) return;
-  
   const esSuspendido = estado === 'suspendido';
 
-  statusPanel.className = "p-6 rounded-2xl bg-orange-50 border border-orange-200 text-center space-y-3 shadow-sm";
-  statusPanel.innerHTML = `
-    <div class="inline-flex items-center justify-center w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl shadow-xs animate-pulse mx-auto">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    </div>
-    <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider">
-      ${esSuspendido ? 'Cuenta Suspendida' : 'Esperando Aprobación del Administrador'}
-    </h3>
-    <p class="text-xs text-slate-600 leading-relaxed font-medium">
-      ${esSuspendido 
-        ? 'Tu cuenta se encuentra suspendida por la administración.' 
-        : 'Tus documentos han sido enviados con éxito. Un administrador debe revisar y aprobar tu perfil desde el panel de control antes de que puedas conectarte para recibir carreras.'}
-    </p>
-    <div class="inline-flex items-center space-x-1.5 text-[10px] bg-orange-100 text-orange-700 font-extrabold px-3 py-1 rounded-full border border-orange-200">
-      <span class="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span>
-      <span>Pendiente de revisión administrativa</span>
+  const contenidoHTML = `
+    <div class="p-6 rounded-2xl bg-orange-50 border border-orange-200 text-center space-y-3 shadow-sm my-4">
+      <div class="inline-flex items-center justify-center w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl shadow-xs animate-pulse mx-auto">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider">
+        ${esSuspendido ? 'Cuenta Suspendida' : 'Esperando Aprobación del Administrador'}
+      </h3>
+      <p class="text-xs text-slate-600 leading-relaxed font-medium">
+        ${esSuspendido 
+          ? 'Tu cuenta se encuentra suspendida por la administración.' 
+          : 'Tus documentos han sido enviados con éxito. Un administrador Voom debe revisar y aprobar tu perfil desde el panel de control antes de que puedas recibir viajes.'}
+      </p>
+      <div class="inline-flex items-center space-x-1.5 text-[10px] bg-orange-100 text-orange-700 font-extrabold px-3 py-1 rounded-full border border-orange-200">
+        <span class="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span>
+        <span>Pendiente de revisión administrativa</span>
+      </div>
+      <div class="pt-2 space-y-2">
+        <button onclick="window.location.href='selector.html'" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold py-3 rounded-xl transition-all shadow-md">
+          Volver al Selector de Modo
+        </button>
+      </div>
     </div>
   `;
 
-  // Ocultar elementos de conexión si existen
+  if (statusPanel) {
+    statusPanel.className = "";
+    statusPanel.innerHTML = contenidoHTML;
+  } else {
+    const mainContainer = document.querySelector('main') || document.body;
+    mainContainer.innerHTML = `<div class="max-w-md mx-auto p-4">${contenidoHTML}</div>`;
+  }
+
+  // Ocultar elementos de conexión y lista de viajes si existen
   const toggleContainer = document.getElementById('toggle-container');
   if (toggleContainer) toggleContainer.innerHTML = '';
+  
+  const listaViajes = document.getElementById('lista-viajes');
+  if (listaViajes) listaViajes.innerHTML = '';
 }
 
 // Carga únicamente viajes filtrados por el tipo_servicio del conductor
