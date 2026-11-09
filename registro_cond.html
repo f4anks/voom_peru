@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Voom - Registro de Conductor</title>
   
-  <!-- 1. LA LIBRERÍA DE SUPABASE DEBE SER LO PRIMERO EN CARGARSE -->
+  <!-- 1. Carga de Supabase SDK obligatoria al inicio -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <!-- Metadatos PWA -->
@@ -28,42 +28,87 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col justify-between p-4 sm:p-6">
 
-  <!-- CONTENIDO PRINCIPAL DE REGISTRO -->
+  <!-- CONTENIDO PRINCIPAL DE REGISTRO COMPLETO -->
   <div class="w-full max-w-xl mx-auto bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sm:p-8 my-auto space-y-6">
     <div class="border-b border-slate-100 pb-4">
       <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Registro de Conductor</h1>
-      <p class="text-xs text-slate-500 font-medium mt-0.5">Sube tus datos y documentos para la revisión del administrador.</p>
+      <p class="text-xs text-slate-500 font-medium mt-0.5">Sube tus datos personales, información del vehículo y fotos correspondientes.</p>
     </div>
 
     <div id="status-registro" class="p-3 rounded-xl bg-orange-50 border border-orange-200 text-xs text-orange-800 font-bold hidden"></div>
 
-    <!-- Formulario -->
+    <!-- Formulario Completo -->
     <form id="form-registro" class="space-y-4">
-      <div>
-        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nombre Completo</label>
-        <input type="text" id="nombre_completo" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500">
+      
+      <!-- Datos Personales -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-black text-orange-600 uppercase tracking-wider">1. Datos Personales</h3>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nombre Completo</label>
+          <input type="text" id="nombre_completo" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500" placeholder="Ej: Juan Pérez">
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">DNI / Documento</label>
+            <input type="text" id="dni" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500" placeholder="Número de DNI">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Teléfono / WhatsApp</label>
+            <input type="tel" id="telefono" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500" placeholder="Ej: 987654321">
+          </div>
+        </div>
       </div>
 
-      <div>
-        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tipo de Servicio</label>
-        <select id="tipo_servicio" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500 bg-white">
-          <option value="moto">Moto Taxi / Reparto</option>
-          <option value="auto">Auto / Taxi</option>
-        </select>
+      <!-- Datos del Vehículo -->
+      <div class="space-y-3 pt-2">
+        <h3 class="text-xs font-black text-orange-600 uppercase tracking-wider">2. Datos del Vehículo</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tipo de Servicio</label>
+            <select id="tipo_servicio" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500 bg-white">
+              <option value="moto">Moto Taxi / Reparto</option>
+              <option value="auto">Auto / Taxi</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Placa o Matrícula</label>
+            <input type="text" id="vehiculo_placa" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs uppercase focus:outline-none focus:border-orange-500" placeholder="ABC-123">
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Modelo / Marca</label>
+            <input type="text" id="vehiculo_modelo" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500" placeholder="Ej: Honda Wave / Toyota Yaris">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Color del Vehículo</label>
+            <input type="text" id="vehiculo_color" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500" placeholder="Ej: Negro / Rojo">
+          </div>
+        </div>
       </div>
 
-      <div>
-        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Placa o Matrícula del Vehículo</label>
-        <input type="text" id="vehiculo_placa" required class="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs uppercase focus:outline-none focus:border-orange-500">
+      <!-- Fotos del Vehículo -->
+      <div class="space-y-3 pt-2">
+        <h3 class="text-xs font-black text-orange-600 uppercase tracking-wider">3. Fotos del Vehículo</h3>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Foto Frontal del Vehículo</label>
+          <input type="file" id="foto_frontal" accept="image/*" required class="w-full text-xs text-slate-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Foto Lateral del Vehículo</label>
+          <input type="file" id="foto_lateral" accept="image/*" required class="w-full text-xs text-slate-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+        </div>
       </div>
 
-      <button type="submit" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-xs py-3.5 rounded-xl shadow-md transition-transform active:scale-95">
-        Enviar Documentos para Aprobación
-      </button>
+      <div class="pt-4">
+        <button type="submit" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-xs py-3.5 rounded-xl shadow-md transition-transform active:scale-95">
+          Enviar Datos y Fotos para Aprobación
+        </button>
+      </div>
+
     </form>
   </div>
 
-  <!-- Scripts al final -->
   <script src="js/registro_cond.js"></script>
 
   <script>
