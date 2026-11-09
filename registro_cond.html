@@ -32,15 +32,15 @@
   <div class="w-full max-w-xl mx-auto bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sm:p-8 my-auto space-y-6">
     <div class="border-b border-slate-100 pb-4">
       <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Registro de Conductor</h1>
-      <p class="text-xs text-slate-500 font-medium mt-0.5">Sube tus datos personales, información del vehículo y fotos correspondientes.</p>
+      <p class="text-xs text-slate-500 font-medium mt-0.5">Sube tus datos personales, información y los documentos requeridos mediante captura directa.</p>
     </div>
 
     <div id="status-registro" class="p-3 rounded-xl bg-orange-50 border border-orange-200 text-xs text-orange-800 font-bold hidden"></div>
 
     <!-- Formulario Completo -->
-    <form id="form-registro" class="space-y-4">
+    <form id="form-registro" class="space-y-5">
       
-      <!-- Datos Personales -->
+      <!-- 1. Datos Personales -->
       <div class="space-y-3">
         <h3 class="text-xs font-black text-orange-600 uppercase tracking-wider">1. Datos Personales</h3>
         <div>
@@ -59,7 +59,7 @@
         </div>
       </div>
 
-      <!-- Datos del Vehículo -->
+      <!-- 2. Datos del Vehículo -->
       <div class="space-y-3 pt-2">
         <h3 class="text-xs font-black text-orange-600 uppercase tracking-wider">2. Datos del Vehículo</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -87,22 +87,39 @@
         </div>
       </div>
 
-      <!-- Fotos del Vehículo -->
+      <!-- 3. Documentación y Fotografías por Cámara Directa -->
       <div class="space-y-3 pt-2">
-        <h3 class="text-xs font-black text-orange-600 uppercase tracking-wider">3. Fotos del Vehículo</h3>
+        <h3 class="text-xs font-black text-orange-600 uppercase tracking-wider">3. Documentación y Fotografías (Cámara Directa)</h3>
+        
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Foto de Licencia de Conducir (Brevete)</label>
+          <input type="file" id="foto_brevete" accept="image/*" capture="environment" required class="w-full text-xs text-slate-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Carta de Buena Conducta / Antecedentes</label>
+          <input type="file" id="foto_carta_conducta" accept="image/*" capture="environment" required class="w-full text-xs text-slate-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Título de Propiedad / Tarjeta del Vehículo</label>
+          <input type="file" id="foto_titulo_vehiculo" accept="image/*" capture="environment" required class="w-full text-xs text-slate-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+        </div>
+
         <div>
           <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Foto Frontal del Vehículo</label>
-          <input type="file" id="foto_frontal" accept="image/*" required class="w-full text-xs text-slate-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+          <input type="file" id="foto_frontal" accept="image/*" capture="environment" required class="w-full text-xs text-slate-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
         </div>
+
         <div>
           <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Foto Lateral del Vehículo</label>
-          <input type="file" id="foto_lateral" accept="image/*" required class="w-full text-xs text-slate-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+          <input type="file" id="foto_lateral" accept="image/*" capture="environment" required class="w-full text-xs text-slate-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
         </div>
       </div>
 
       <div class="pt-4">
         <button type="submit" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-xs py-3.5 rounded-xl shadow-md transition-transform active:scale-95">
-          Enviar Datos y Fotos para Aprobación
+          Enviar Datos y Documentos para Aprobación
         </button>
       </div>
 
