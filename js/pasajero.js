@@ -4,12 +4,15 @@ const SUPABASE_ANON_KEY = "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM";
 
 let supabaseClient = null;
 let map = null;
-let userMarker = null;
+let origenMarker = null;
+let destinoMarker = null;
 let currentUser = null;
 let debounceTimer = null;
+let modoSeleccion = 'destino'; // 'origen' o 'destino'
 
 // Ubicación por defecto de prueba (Lima, Perú)
-let userCoords = { lat: -12.046374, lng: -77.042793 };
+let origenCoords = { lat: -12.046374, lng: -77.042793 };
+let destinoCoords = null;
 
 function esperarSupabase(intentos = 15) {
   return new Promise((resolve, reject) => {
@@ -51,12 +54,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
+function activarModoSeleccion(modo) {
+  modoSeleccion = modo;
+}
+
 function inicializarMapa() {
   const mapContainer = document.getElementById('map');
   if (!mapContainer || typeof L === 'undefined') return;
 
-  // 1. Crear mapa centrado en Lima
-  map = L.map('map', { zoomControl: false }).setView([userCoords.lat, userCoords.lng], 15);
+  // 1. Crear mapa Leaflet
+  map = L.map('map', { zoomControl: false }).setView([origenCoords.lat, origenCoords.lng], 15);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
@@ -66,55 +73,92 @@ function inicializarMapa() {
     if (map) map.invalidateSize();
   }, 300);
 
-  // Marcador editable
-  userMarker = L.marker([userCoords.lat, userCoords.lng], { draggable: true })
-    .addTo(map)
-    .bindPopup("<b>Origen del viaje</b><br>Arrastra o haz clic en el mapa para mover")
-    .openPopup();
-
-  obtenerDireccionPorCoords(userCoords.lat, userCoords.lng);
-
-  // --- HABILITAR SELECCIÓN MANUAL EN EL MAPA ---
-  map.on('click', (e) => {
-    const { lat, lng } = e.latlng;
-    actualizarPosicionOrigen(lat, lng);
+  // Marcador Origen A (Verde)
+  const greenIcon = L.divIcon({
+    className: 'custom-div-icon',
+    html: "<div style='background-color:#10b981; width:18px; height:18px; border-radius:50%; border:3px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.3);'></div>",
+    iconSize: [18, 18],
+    iconAnchor: [9, 9]
   });
 
-  // Permitir arrastrar el pin
-  userMarker.on('dragend', (e) => {
+  origenMarker = L.marker([origenCoords.lat, origenCoords.lng], { draggable: true, icon: greenIcon })
+    .addTo(map)
+    .bindPopup("<b>Origen (A)</b><br>Haz clic o arrastra")
+    .openPopup();
+
+  obtenerDireccionPorCoords(origenCoords.lat, origenCoords.lng, 'origen');
+
+  // EVENTO DE SELECCIÓN EN MAPA (ORIGEN O DESTINO)
+  map.on('click', (e) => {
+    const { lat, lng } = e.latlng;
+    if (modoSeleccion === 'origen') {
+      actualizarPosicionOrigen(lat, lng);
+    } else {
+      actualizarPosicionDestino(lat, lng);
+    }
+  });
+
+  // Arrastrar origen
+  origenMarker.on('dragend', (e) => {
     const pos = e.target.getLatLng();
     actualizarPosicionOrigen(pos.lat, pos.lng);
   });
 }
 
 function actualizarPosicionOrigen(lat, lng) {
-  userCoords = { lat, lng };
-  if (userMarker) {
-    userMarker.setLatLng([lat, lng]);
+  origenCoords = { lat, lng };
+  if (origenMarker) {
+    origenMarker.setLatLng([lat, lng]);
   }
-  obtenerDireccionPorCoords(lat, lng);
+  obtenerDireccionPorCoords(lat, lng, 'origen');
 }
 
-// Convertir Coordenadas -> Texto de dirección (Geocodificación Inversa)
-async function obtenerDireccionPorCoords(lat, lng) {
-  const origenInput = document.getElementById('origen-txt');
-  if (origenInput) origenInput.value = "Obteniendo dirección...";
+function actualizarPosicionDestino(lat, lng) {
+  destinoCoords = { lat, lng };
+
+  const orangeIcon = L.divIcon({
+    className: 'custom-div-icon',
+    html: "<div style='background-color:#f97316; width:18px; height:18px; border-radius:50%; border:3px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.3);'></div>",
+    iconSize: [18, 18],
+    iconAnchor: [9, 9]
+  });
+
+  if (destinoMarker) {
+    destinoMarker.setLatLng([lat, lng]);
+  } else {
+    destinoMarker = L.marker([lat, lng], { draggable: true, icon: orangeIcon })
+      .addTo(map)
+      .bindPopup("<b>Destino (B)</b>")
+      .openPopup();
+
+    destinoMarker.on('dragend', (e) => {
+      const pos = e.target.getLatLng();
+      actualizarPosicionDestino(pos.lat, pos.lng);
+    });
+  }
+
+  obtenerDireccionPorCoords(lat, lng, 'destino');
+}
+
+// Convertir Coordenadas -> Dirección escrita
+async function obtenerDireccionPorCoords(lat, lng, tipo) {
+  const inputEl = document.getElementById(tipo === 'origen' ? 'origen-txt' : 'destino-txt');
+  if (inputEl) inputEl.value = "Obteniendo dirección...";
 
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&countrycodes=pe`);
     const data = await res.json();
-    if (data && data.display_name && origenInput) {
-      // Formatear dirección corta
+    if (data && data.display_name && inputEl) {
       const partes = data.display_name.split(',');
       const direccionCorta = partes.slice(0, 3).join(',');
-      origenInput.value = direccionCorta;
+      inputEl.value = direccionCorta;
     }
   } catch (e) {
-    if (origenInput) origenInput.value = `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
+    if (inputEl) inputEl.value = `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
   }
 }
 
-// --- BUSCADOR EN TIEMPO REAL PARA EL DESTINO ---
+// Autocompletado de Destino
 function configurarBuscadorDestino() {
   const destinoInput = document.getElementById('destino-txt');
   const sugerenciasBox = document.getElementById('sugerencias-destino');
@@ -132,7 +176,6 @@ function configurarBuscadorDestino() {
 
     debounceTimer = setTimeout(async () => {
       try {
-        // Buscar direcciones en Perú
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=pe&limit=5`;
         const res = await fetch(url);
         const resultados = await res.json();
@@ -149,6 +192,8 @@ function configurarBuscadorDestino() {
           div.innerHTML = `<span>📍</span> <span>${item.display_name}</span>`;
           div.onclick = () => {
             destinoInput.value = item.display_name.split(',').slice(0, 3).join(',');
+            actualizarPosicionDestino(parseFloat(item.lat), parseFloat(item.lon));
+            map.setView([item.lat, item.lon], 15);
             sugerenciasBox.classList.add('hidden');
           };
           sugerenciasBox.appendChild(div);
@@ -167,7 +212,7 @@ async function solicitarViaje() {
   const destino = destinoInput ? destinoInput.value.trim() : '';
 
   if (!destino) {
-    alert("Por favor ingresa o selecciona la dirección de destino.");
+    alert("Por favor ingresa o marca en el mapa el punto de destino.");
     if (destinoInput) destinoInput.focus();
     return;
   }
@@ -189,9 +234,11 @@ async function solicitarViaje() {
       .insert({
         pasajero_id: currentUser.id,
         tipo_servicio: servicioActual,
-        origen_lat: userCoords.lat,
-        origen_lng: userCoords.lng,
+        origen_lat: origenCoords.lat,
+        origen_lng: origenCoords.lng,
         destino_direccion: destino,
+        destino_lat: destinoCoords ? destinoCoords.lat : null,
+        destino_lng: destinoCoords ? destinoCoords.lng : null,
         precio: precioBase,
         estado: 'buscando'
       });
@@ -206,7 +253,7 @@ async function solicitarViaje() {
 
   } catch (err) {
     console.error("Error al solicitar viaje:", err);
-    alert("No se pudo enviar la solicitud: " + err.message);
+    alert("No se pudo enviar la solicitud: " + error.message);
     if (btnSolicitar) btnSolicitar.disabled = false;
     if (estadoBox) estadoBox.classList.add('hidden');
   }
