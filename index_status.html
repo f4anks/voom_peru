@@ -4,10 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Voom - Estado de Cuenta</title>
-  
-  <!-- Supabase y Tailwind CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Metadatos PWA -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#f8fafc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Voom">
+
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <style>
@@ -18,95 +24,98 @@
     }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col justify-between p-4 sm:p-6">
+<body class="bg-slate-100 text-slate-800 min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
 
-  <!-- CONTENEDOR PRINCIPAL DE ESTATUS -->
-  <div class="w-full max-w-md mx-auto bg-white rounded-3xl shadow-[0_15px_40px_-15px_rgba(0,0,0,0.08)] border border-slate-200/80 p-6 sm:p-8 my-auto space-y-6 text-center">
+  <!-- Adornos gráficos de fondo -->
+  <div class="absolute -top-24 -left-24 w-80 h-80 bg-orange-400/15 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute -bottom-24 -right-24 w-80 h-80 bg-amber-400/15 rounded-full blur-3xl pointer-events-none"></div>
+
+  <!-- TARJETA PRINCIPAL DE ESTATUS -->
+  <div class="w-full max-w-md bg-white rounded-3xl shadow-[0_15px_40px_-15px_rgba(0,0,0,0.08)] border border-slate-200/80 p-8 relative z-10 space-y-6 text-center">
     
-    <!-- Icono de Reloj / Pendiente -->
-    <div class="inline-flex items-center justify-center w-16 h-16 bg-orange-100 text-orange-600 rounded-2xl shadow-xs animate-pulse mx-auto">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+    <!-- Ícono de Estatus -->
+    <div id="status-icon" class="inline-flex items-center justify-center w-20 h-20 bg-amber-100 text-amber-600 rounded-3xl shadow-lg shadow-amber-500/15 mb-1">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     </div>
 
     <div>
-      <h1 id="titulo-estado" class="text-xl font-black text-slate-900 tracking-tight">Verificando Estatus...</h1>
-      <p id="texto-estado" class="text-xs text-slate-600 leading-relaxed font-medium mt-2">
-        Comprobando el estado actual de tu cuenta con la administración de Voom.
+      <h1 id="status-title" class="text-2xl font-black text-slate-900 tracking-tight">Verificando Estado...</h1>
+      <p id="status-desc" class="text-xs font-semibold text-slate-500 mt-2 leading-relaxed">
+        Consultando la base de datos de Voom...
       </p>
     </div>
 
-    <div class="inline-flex items-center space-x-1.5 text-[10px] bg-orange-100 text-orange-700 font-extrabold px-3 py-1 rounded-full border border-orange-200">
-      <span class="w-1.5 h-1.5 bg-orange-500 rounded-full animate-ping"></span>
-      <span>Sistema de validación Voom</span>
-    </div>
-
-    <div class="pt-2 space-y-3">
-      <button onclick="window.location.href='selector.html'" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-3 rounded-xl transition-all shadow-xs">
-        Volver al Selector de Modo
-      </button>
-      <button onclick="cerrarSesion()" class="w-full text-xs font-bold text-slate-400 hover:text-red-500 transition-colors pt-2">
-        Cerrar Sesión de la Cuenta
-      </button>
+    <!-- Botones de Acción -->
+    <div class="space-y-2 pt-2">
+      <a href="index_menu.html" class="block w-full bg-slate-100 text-slate-700 font-extrabold text-xs py-3.5 rounded-xl hover:bg-slate-200 transition-colors">
+        Volver al Menú Principal
+      </a>
     </div>
 
   </div>
 
-  <!-- Lógica independiente para verificar estatus -->
   <script>
-    const SUPABASE_URL = "https://gklquvthucityzgcamao.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM";
-    let supabaseClient = null;
+    const SUPABASE_URL = 'https://gklquvthucityzgcamao.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    window.addEventListener('DOMContentLoaded', async () => {
-      if (window.supabase && window.supabase.createClient) {
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      } else {
-        return;
+    document.addEventListener('DOMContentLoaded', async () => {
+      const iconBox = document.getElementById('status-icon');
+      const titleEl = document.getElementById('status-title');
+      const descEl = document.getElementById('status-desc');
+
+      try {
+        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        if (sessionError || !session) {
+          window.location.href = 'index.html';
+          return;
+        }
+
+        const user = session.user;
+        const { data: perfil, error: perfilError } = await supabaseClient
+          .from('perfiles')
+          .select('estado_cuenta')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (perfilError || !perfil) {
+          titleEl.textContent = "Sin Registro de Conductor";
+          descEl.textContent = "No hemos encontrado tu solicitud de conductor. Por favor completa el formulario de registro.";
+          return;
+        }
+
+        const estado = perfil.estado_cuenta || 'pendiente';
+
+        if (estado === 'aprobado') {
+          // Si por alguna razón fue aprobado mientras estaba en esta pantalla, redirigir al panel de conductor
+          window.location.href = 'conductor.html';
+        } else if (estado === 'suspendido') {
+          iconBox.className = "inline-flex items-center justify-center w-20 h-20 bg-red-100 text-red-600 rounded-3xl shadow-lg shadow-red-500/15 mb-1";
+          iconBox.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>`;
+          titleEl.textContent = "Cuenta Suspendida";
+          descEl.textContent = "Tu cuenta de conductor se encuentra suspendida temporalmente por la administración. Comunícate con soporte para más detalles.";
+        } else {
+          // Pendiente / En revisión
+          iconBox.className = "inline-flex items-center justify-center w-20 h-20 bg-amber-100 text-amber-600 rounded-3xl shadow-lg shadow-amber-500/15 mb-1";
+          iconBox.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>`;
+          titleEl.textContent = "Registro en Revisión";
+          descEl.textContent = "Tus datos y documentos han sido recibidos con éxito. El equipo de administración de Voom está revisando tu información. Te notificaremos tan pronto tu cuenta sea activada.";
+        }
+
+      } catch (err) {
+        console.error("Error al cargar el estatus:", err);
+        titleEl.textContent = "Error de Consulta";
+        descEl.textContent = "No pudimos obtener el estado actual de tu cuenta. Por favor intenta más tarde.";
       }
-
-      // Validar sesión activa
-      const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-      if (authError || !user) {
-        window.location.href = 'index.html';
-        return;
-      }
-
-      // Consultar perfil
-      const { data: perfil, error } = await supabaseClient
-        .from('perfiles')
-        .select('estado_cuenta, tipo_servicio')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (error || !perfil) {
-        document.getElementById('titulo-estado').textContent = "Perfil no encontrado";
-        document.getElementById('texto-estado').textContent = "No se encontró un perfil asociado a tu cuenta en la base de datos.";
-        return;
-      }
-
-      // Si por alguna razón ya fue aprobado, redirigir al panel de conductor directamente
-      if (perfil.estado_cuenta === 'aprobado') {
-        window.location.href = 'conductor.html';
-        return;
-      }
-
-      // Mostrar texto según el estado de la cuenta
-      const esSuspendido = perfil.estado_cuenta === 'suspendido';
-      document.getElementById('titulo-estado').textContent = esSuspendido ? 'Cuenta Suspendida' : 'Esperando Aprobación';
-      document.getElementById('texto-estado').textContent = esSuspendido 
-        ? 'Tu cuenta se encuentra suspendida temporalmente por la administración.' 
-        : 'Tus documentos e información han sido recibidos con éxito. Un administrador de Voom debe revisar y aprobar tu perfil antes de habilitar los viajes.';
     });
-
-    async function cerrarSesion() {
-      if (supabaseClient) {
-        await supabaseClient.auth.signOut();
-      }
-      localStorage.clear();
-      window.location.href = 'index.html';
-    }
 
     document.addEventListener('contextmenu', e => e.preventDefault());
   </script>
