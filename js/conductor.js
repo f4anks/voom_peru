@@ -54,22 +54,24 @@ window.addEventListener('DOMContentLoaded', async () => {
       verificarAnunciosGlobales('conductor');
     }
 
-    // Consultar perfil del conductor en Supabase
+    // Consultar perfil del conductor en Supabase incluyendo campos clave de registro
     const { data: perfil, error } = await supabaseClient
       .from('perfiles')
-      .select('estado_cuenta, vehiculo_placa, vehiculo_matricula, nombre_completo, tipo_servicio')
+      .select('estado_cuenta, vehiculo_placa, vehiculo_matricula, nombre_completo, tipo_servicio, dni')
       .eq('id', user.id)
       .maybeSingle();
 
-    const tieneVehiculo = perfil && (perfil.vehiculo_placa || perfil.vehiculo_matricula);
+    // Validar si ya completó su registro anteriormente
+    const estaRegistrado = perfil && (perfil.vehiculo_placa || perfil.vehiculo_matricula || perfil.dni);
 
-    // Si no existe perfil o no ha subido los datos del vehículo, enviar al registro
-    if (error || !perfil || !tieneVehiculo) {
+    // Si no existe perfil o nunca se ha registrado, enviar al formulario de registro por única vez
+    if (error || !perfil || !estaRegistrado) {
       window.location.href = 'registro_cond.html';
       return;
     }
 
-    // Si la cuenta no está aprobada o está suspendida, enviar a la pantalla de estado dedicada
+    // Si ya está registrado pero su cuenta NO está aprobada (pendiente, suspendida, etc.),
+    // enviar siempre a la pantalla de estatus dedicada para evitar duplicados.
     if (perfil.estado_cuenta !== 'aprobado') {
       window.location.href = 'index_status.html';
       return;
@@ -110,7 +112,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             }, () => {}, { timeout: 10000, enableHighAccuracy: true });
           }
         } catch (mapErr) {
-          console.warn("Mapa omitido temporamente:", mapErr);
+          console.warn("Mapa omitido temporalmente:", mapErr);
         }
       }
     }, 400);
