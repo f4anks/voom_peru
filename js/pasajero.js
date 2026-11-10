@@ -6,7 +6,21 @@ let currentUser = null;
 let debounceTimer = null;
 let modoSeleccion = 'destino';
 
-let origenCoords = { ...CONFIG_VOOM.UBICACION_DEFECTO };
+// Respaldo seguro por si CONFIG_VOOM aún no ha cargado en el HTML
+const CONFIG_DEFECTO = {
+  SUPABASE_URL: "https://gklquvthucityzgcamao.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM",
+  UBICACION_DEFECTO: { lat: -12.046374, lng: -77.042793 },
+  TARIFA: { precioBase: 1.00, precioPorKm: 0.50, tarifaMinima: 2.00 },
+  MULTIPLICADORES: { moto: 1.0, economico: 1.5, confort: 2.0, flete: 3.5, grua: 6.0 }
+};
+
+// Obtener configuración activa con fallback de seguridad
+function getConfig() {
+  return typeof CONFIG_VOOM !== 'undefined' ? CONFIG_VOOM : CONFIG_DEFECTO;
+}
+
+let origenCoords = { ...(getConfig().UBICACION_DEFECTO || CONFIG_DEFECTO.UBICACION_DEFECTO) };
 let destinoCoords = null;
 
 function esperarSupabase(intentos = 15) {
@@ -26,8 +40,9 @@ function esperarSupabase(intentos = 15) {
 
 window.addEventListener('DOMContentLoaded', async () => {
   try {
+    const config = getConfig();
     const supabaseLib = await esperarSupabase();
-    supabaseClient = supabaseLib.createClient(CONFIG_VOOM.SUPABASE_URL, CONFIG_VOOM.SUPABASE_ANON_KEY);
+    supabaseClient = supabaseLib.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
 
     const { data: { user }, error } = await supabaseClient.auth.getUser();
     if (error || !user) {
@@ -46,6 +61,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   } catch (err) {
     console.error("Error al iniciar pasajero:", err);
+    // Inicializar mapa de todas formas aunque falle Auth en pruebas locales
+    inicializarMapa();
   }
 });
 
@@ -55,14 +72,16 @@ function activarModoSeleccion(modo) {
 
 function inicializarMapa() {
   const mapContainer = document.getElementById('map');
-  if (!mapContainer || typeof L === 'undefined') return;
+  if (!mapContainer || typeof L === 'undefined' || map !== null) return;
 
+  // 1. Crear mapa centrado en Lima, Perú
   map = L.map('map', { zoomControl: false }).setView([origenCoords.lat, origenCoords.lng], 15);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
+  // Redibujado forzado para Leaflet en contenedores adaptativos
   setTimeout(() => {
     if (map) map.invalidateSize();
   }, 300);
@@ -81,6 +100,7 @@ function inicializarMapa() {
 
   obtenerDireccionPorCoords(origenCoords.lat, origenCoords.lng, 'origen');
 
+  // EVENTOS DE SELECCIÓN EN EL MAPA
   map.on('click', (e) => {
     const { lat, lng } = e.latlng;
     if (modoSeleccion === 'origen') {
@@ -150,7 +170,6 @@ async function obtenerDireccionPorCoords(lat, lng, tipo) {
   }
 }
 
-// Cálculo de Haversine para obtener distancia en KM
 function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -163,7 +182,6 @@ function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-// Recálculo dinámico basado en CONFIG_VOOM.TARIFA
 function recalcularTarifasViaje() {
   if (!origenCoords || !destinoCoords) return;
 
@@ -172,8 +190,9 @@ function recalcularTarifasViaje() {
     destinoCoords.lat, destinoCoords.lng
   );
 
-  const { precioBase, precioPorKm, tarifaMinima } = CONFIG_VOOM.TARIFA;
-  const multiplicadores = CONFIG_VOOM.MULTIPLICADORES;
+  const config = getConfig();
+  const { precioBase, precioPorKm, tarifaMinima } = config.TARIFA || CONFIG_DEFECTO.TARIFA;
+  const multiplicadores = config.MULTIPLICADORES || CONFIG_DEFECTO.MULTIPLICADORES;
 
   document.querySelectorAll('.service-card').forEach(card => {
     const tipo = card.getAttribute('data-service');
@@ -261,7 +280,8 @@ async function solicitarViaje() {
   try {
     const servicioActual = window.servicioSeleccionado || 'economico';
     const selectedCard = document.querySelector(`[data-service="${servicioActual}"]`);
-    const precioBase = selectedCard ? parseFloat(selectedCard.querySelector('.price-tag').getAttribute('data-base')) : CONFIG_VOOM.TARIFA.tarifaMinima;
+    const config = getConfig();
+    const precioBase = selectedCard ? parseFloat(selectedCard.querySelector('.price-tag').getAttribute('data-base')) : config.TARIFA.tarifaMinima;
 
     const { error } = await supabaseClient
       .from('viajes')
