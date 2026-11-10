@@ -1,17 +1,12 @@
-// CONFIGURACIÓN DE SUPABASE
-const SUPABASE_URL = "https://gklquvthucityzgcamao.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM";
-
 let supabaseClient = null;
 let map = null;
 let origenMarker = null;
 let destinoMarker = null;
 let currentUser = null;
 let debounceTimer = null;
-let modoSeleccion = 'destino'; // 'origen' o 'destino'
+let modoSeleccion = 'destino';
 
-// Ubicación por defecto de prueba (Lima, Perú)
-let origenCoords = { lat: -12.046374, lng: -77.042793 };
+let origenCoords = { ...CONFIG_VOOM.UBICACION_DEFECTO };
 let destinoCoords = null;
 
 function esperarSupabase(intentos = 15) {
@@ -32,7 +27,7 @@ function esperarSupabase(intentos = 15) {
 window.addEventListener('DOMContentLoaded', async () => {
   try {
     const supabaseLib = await esperarSupabase();
-    supabaseClient = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabaseClient = supabaseLib.createClient(CONFIG_VOOM.SUPABASE_URL, CONFIG_VOOM.SUPABASE_ANON_KEY);
 
     const { data: { user }, error } = await supabaseClient.auth.getUser();
     if (error || !user) {
@@ -62,7 +57,6 @@ function inicializarMapa() {
   const mapContainer = document.getElementById('map');
   if (!mapContainer || typeof L === 'undefined') return;
 
-  // 1. Crear mapa Leaflet
   map = L.map('map', { zoomControl: false }).setView([origenCoords.lat, origenCoords.lng], 15);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -73,7 +67,6 @@ function inicializarMapa() {
     if (map) map.invalidateSize();
   }, 300);
 
-  // Marcador Origen A (Verde)
   const greenIcon = L.divIcon({
     className: 'custom-div-icon',
     html: "<div style='background-color:#10b981; width:18px; height:18px; border-radius:50%; border:3px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.3);'></div>",
@@ -88,7 +81,6 @@ function inicializarMapa() {
 
   obtenerDireccionPorCoords(origenCoords.lat, origenCoords.lng, 'origen');
 
-  // EVENTO DE SELECCIÓN EN MAPA (ORIGEN O DESTINO)
   map.on('click', (e) => {
     const { lat, lng } = e.latlng;
     if (modoSeleccion === 'origen') {
@@ -98,7 +90,6 @@ function inicializarMapa() {
     }
   });
 
-  // Arrastrar origen
   origenMarker.on('dragend', (e) => {
     const pos = e.target.getLatLng();
     actualizarPosicionOrigen(pos.lat, pos.lng);
@@ -111,6 +102,7 @@ function actualizarPosicionOrigen(lat, lng) {
     origenMarker.setLatLng([lat, lng]);
   }
   obtenerDireccionPorCoords(lat, lng, 'origen');
+  recalcularTarifasViaje();
 }
 
 function actualizarPosicionDestino(lat, lng) {
@@ -138,9 +130,9 @@ function actualizarPosicionDestino(lat, lng) {
   }
 
   obtenerDireccionPorCoords(lat, lng, 'destino');
+  recalcularTarifasViaje();
 }
 
-// Convertir Coordenadas -> Dirección escrita
 async function obtenerDireccionPorCoords(lat, lng, tipo) {
   const inputEl = document.getElementById(tipo === 'origen' ? 'origen-txt' : 'destino-txt');
   if (inputEl) inputEl.value = "Obteniendo dirección...";
@@ -158,7 +150,49 @@ async function obtenerDireccionPorCoords(lat, lng, tipo) {
   }
 }
 
-// Autocompletado de Destino
+// Cálculo de Haversine para obtener distancia en KM
+function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// Recálculo dinámico basado en CONFIG_VOOM.TARIFA
+function recalcularTarifasViaje() {
+  if (!origenCoords || !destinoCoords) return;
+
+  const distanciaKm = calcularDistanciaKm(
+    origenCoords.lat, origenCoords.lng, 
+    destinoCoords.lat, destinoCoords.lng
+  );
+
+  const { precioBase, precioPorKm, tarifaMinima } = CONFIG_VOOM.TARIFA;
+  const multiplicadores = CONFIG_VOOM.MULTIPLICADORES;
+
+  document.querySelectorAll('.service-card').forEach(card => {
+    const tipo = card.getAttribute('data-service');
+    const mult = multiplicadores[tipo] || 1.0;
+
+    let precioCalculado = (precioBase + (distanciaKm * precioPorKm)) * mult;
+    
+    if (precioCalculado < (tarifaMinima * mult)) {
+      precioCalculado = tarifaMinima * mult;
+    }
+
+    const priceTag = card.querySelector('.price-tag');
+    if (priceTag) {
+      priceTag.setAttribute('data-base', precioCalculado.toFixed(2));
+      priceTag.textContent = `S/ ${precioCalculado.toFixed(2)}`;
+    }
+  });
+}
+
 function configurarBuscadorDestino() {
   const destinoInput = document.getElementById('destino-txt');
   const sugerenciasBox = document.getElementById('sugerencias-destino');
@@ -227,7 +261,7 @@ async function solicitarViaje() {
   try {
     const servicioActual = window.servicioSeleccionado || 'economico';
     const selectedCard = document.querySelector(`[data-service="${servicioActual}"]`);
-    const precioBase = selectedCard ? parseFloat(selectedCard.querySelector('.price-tag').getAttribute('data-base')) : 5.00;
+    const precioBase = selectedCard ? parseFloat(selectedCard.querySelector('.price-tag').getAttribute('data-base')) : CONFIG_VOOM.TARIFA.tarifaMinima;
 
     const { error } = await supabaseClient
       .from('viajes')
@@ -253,7 +287,7 @@ async function solicitarViaje() {
 
   } catch (err) {
     console.error("Error al solicitar viaje:", err);
-    alert("No se pudo enviar la solicitud: " + error.message);
+    alert("No se pudo enviar la solicitud: " + err.message);
     if (btnSolicitar) btnSolicitar.disabled = false;
     if (estadoBox) estadoBox.classList.add('hidden');
   }
