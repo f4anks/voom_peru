@@ -6,9 +6,11 @@ let supabaseClient = null;
 let map = null;
 let userMarker = null;
 let currentUser = null;
-let userCoords = { lat: -12.046374, lng: -77.042793 }; // Coordenadas por defecto (Lima)
 
-// Esperar disponibilidad del SDK de Supabase
+// Ubicación de prueba fija en Lima, Perú
+let userCoords = { lat: -12.046374, lng: -77.042793 };
+
+// Función para esperar la carga del SDK de Supabase
 function esperarSupabase(intentos = 15) {
   return new Promise((resolve, reject) => {
     const verificar = (restantes) => {
@@ -41,7 +43,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       nameEl.textContent = user.user_metadata?.full_name || user.email.split('@')[0];
     }
 
-    // Inicializar mapa y geolocalización
+    // Inicializar mapa dinámico centrado en Lima
     inicializarMapa();
 
   } catch (err) {
@@ -53,49 +55,45 @@ function inicializarMapa() {
   const mapContainer = document.getElementById('map');
   if (!mapContainer || typeof L === 'undefined') return;
 
-  // 1. Crear el mapa Leaflet
-  map = L.map('map', { zoomControl: false }).setView([userCoords.lat, userCoords.lng], 14);
+  // 1. Inicializar mapa Leaflet centrado en Lima, Perú
+  map = L.map('map', { zoomControl: false }).setView([userCoords.lat, userCoords.lng], 15);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  // Forzar redibujado de Leaflet para evitar pantalla en blanco
+  // 2. Redibujar mapa para evitar pantalla en blanco en contenedores flex
   setTimeout(() => {
     if (map) map.invalidateSize();
   }, 300);
 
-  // 2. Obtener ubicación en tiempo real
+  // 3. Colocar marcador inicial en Lima
+  userMarker = L.marker([userCoords.lat, userCoords.lng])
+    .addTo(map)
+    .bindPopup("<b>Ubicación de prueba (Lima, Perú)</b>")
+    .openPopup();
+  
   const origenInput = document.getElementById('origen-txt');
+  if (origenInput) {
+    origenInput.value = "Lima, Perú (Ubicación de prueba)";
+  }
 
+  // Si en el futuro deseas activar GPS real del dispositivo, se descomenta este bloque:
+  /*
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        userCoords = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude
-        };
-
+        userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         actualizarPosicionMapa(userCoords.lat, userCoords.lng);
-        if (origenInput) {
-          origenInput.value = "Tu ubicación actual";
-        }
+        if (origenInput) origenInput.value = "Tu ubicación actual";
       },
       (err) => {
-        console.warn("GPS no disponible o denegado, usando ubicación por defecto:", err);
-        actualizarPosicionMapa(userCoords.lat, userCoords.lng);
-        if (origenInput) {
-          origenInput.value = "Ubicación aproximada (Lima)";
-        }
+        console.warn("GPS denegado o no disponible, usando respaldo en Lima:", err);
       },
-      { timeout: 7000, enableHighAccuracy: true }
+      { timeout: 5000, enableHighAccuracy: true }
     );
-  } else {
-    actualizarPosicionMapa(userCoords.lat, userCoords.lng);
-    if (origenInput) {
-      origenInput.value = "Ubicación aproximada (Lima)";
-    }
   }
+  */
 }
 
 function actualizarPosicionMapa(lat, lng) {
@@ -128,15 +126,16 @@ async function solicitarViaje() {
   if (estadoBox) estadoBox.classList.remove('hidden');
 
   try {
-    // Obtener precio base de la tarjeta activa elegida en HTML
-    const selectedCard = document.querySelector(`[data-service="${window.servicioSeleccionado || 'economico'}"]`);
+    // Obtener precio base según el servicio seleccionado en tarjetas
+    const servicioActual = window.servicioSeleccionado || 'economico';
+    const selectedCard = document.querySelector(`[data-service="${servicioActual}"]`);
     const precioBase = selectedCard ? parseFloat(selectedCard.querySelector('.price-tag').getAttribute('data-base')) : 5.00;
 
     const { error } = await supabaseClient
       .from('viajes')
       .insert({
         pasajero_id: currentUser.id,
-        tipo_servicio: window.servicioSeleccionado || 'economico',
+        tipo_servicio: servicioActual,
         origen_lat: userCoords.lat,
         origen_lng: userCoords.lng,
         destino_direccion: destino,
