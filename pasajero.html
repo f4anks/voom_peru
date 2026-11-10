@@ -66,19 +66,22 @@
         </span>
       </div>
       
-      <!-- Inputs de Ubicación -->
-      <div class="space-y-2.5">
+      <!-- Inputs de Ubicación con Sugerencias -->
+      <div class="space-y-2.5 relative">
         <!-- Origen -->
         <div class="relative flex items-center">
           <div class="w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white shadow-xs absolute left-4 z-10"></div>
-          <input type="text" id="origen-txt" readonly value="Detectando tu ubicación..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3 text-xs font-semibold text-slate-700 focus:outline-none" />
+          <input type="text" id="origen-txt" placeholder="Haz clic en el mapa o busca tu origen..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3 text-xs font-semibold text-slate-700 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all" />
         </div>
 
         <!-- Destino -->
         <div class="relative flex items-center">
           <div class="w-3.5 h-3.5 bg-orange-500 rounded-full border-2 border-white shadow-xs absolute left-4 z-10"></div>
-          <input type="text" id="destino-txt" placeholder="Ingresa punto de destino..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3 text-xs font-bold text-slate-900 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" />
+          <input type="text" id="destino-txt" placeholder="Ingresa punto de destino..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3 text-xs font-bold text-slate-900 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all" autocomplete="off" />
         </div>
+
+        <!-- Lista Desplegable de Sugerencias de Búsqueda -->
+        <div id="sugerencias-destino" class="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-48 overflow-y-auto hidden"></div>
       </div>
 
       <!-- SELECCIÓN DE SERVICIO HORIZONTAL (LADO A LADO) -->
@@ -193,10 +196,10 @@
 
   <script src="js/pasajero.js"></script>
   <script>
-    let servicioSeleccionado = 'economico';
+    window.servicioSeleccionado = 'economico';
 
     function seleccionarServicio(tipo) {
-      servicioSeleccionado = tipo;
+      window.servicioSeleccionado = tipo;
       
       document.querySelectorAll('.service-card').forEach(card => {
         card.className = "service-card cursor-pointer border-2 border-slate-200/80 hover:border-orange-400 bg-white p-3 rounded-2xl flex flex-col justify-between transition-all duration-200 active:scale-95 shadow-xs shrink-0 w-32 relative";
