@@ -30,9 +30,14 @@
 
   <!-- CONTENIDO PRINCIPAL DE REGISTRO COMPLETO -->
   <div class="w-full max-w-xl mx-auto bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sm:p-8 my-auto space-y-6">
-    <div class="border-b border-slate-100 pb-4">
-      <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Registro de Conductor</h1>
-      <p class="text-xs text-slate-500 font-medium mt-0.5">Sube tus datos personales, información del vehículo y documentos en tiempo real.</p>
+    <div class="border-b border-slate-100 pb-4 flex justify-between items-start">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Registro de Conductor</h1>
+        <p class="text-xs text-slate-500 font-medium mt-0.5">Sube tus datos personales, información del vehículo y documentos en tiempo real.</p>
+      </div>
+      <a href="conductor.html" class="text-xs font-bold text-slate-400 hover:text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl transition-colors">
+        ✕ Salir
+      </a>
     </div>
 
     <div id="status-registro" class="p-3 rounded-xl bg-orange-50 border border-orange-200 text-xs text-orange-800 font-bold hidden"></div>
@@ -131,10 +136,13 @@
         </div>
       </div>
 
-      <div class="pt-4">
+      <div class="pt-4 space-y-2.5">
         <button type="submit" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-xs py-3.5 rounded-xl shadow-md transition-transform active:scale-95">
           Enviar Datos y Documentos para Aprobación
         </button>
+        <a href="conductor.html" class="block text-center w-full bg-slate-100 text-slate-600 font-bold text-xs py-3 rounded-xl hover:bg-slate-200 transition-colors">
+          Volver / Completar más tarde
+        </a>
       </div>
 
     </form>
