@@ -72,10 +72,6 @@
     </div>
 
     <div id="status-message" class="p-3.5 rounded-2xl text-xs text-center hidden font-bold border"></div>
-
-    <button onclick="cerrarSesion()" class="w-full text-xs font-bold text-slate-400 hover:text-red-500 transition-colors pt-2">
-      Cerrar Sesión de la Cuenta
-    </button>
   </div>
 
   <script>
@@ -119,7 +115,7 @@
           }
           const user = session.user;
 
-          // Consulta de estatus del perfil
+          // Consulta de estatus del perfil con límite de tiempo
           const consultaPerfil = supabaseClient
             .from('perfiles')
             .select('estado_cuenta, vehiculo_placa, dni')
@@ -134,7 +130,7 @@
           try {
             resultado = await Promise.race([consultaPerfil, timeoutSupabase]);
           } catch (timeoutErr) {
-            window.location.href = 'index_status.html';
+            window.location.href = 'registro_cond.html';
             return;
           }
 
@@ -143,30 +139,25 @@
           // Verificar si ya envió el formulario anteriormente
           const tieneRegistroCompleto = data && (data.vehiculo_placa || data.dni);
 
+          // Validación estricta del flujo:
           if (error || !data || !tieneRegistroCompleto) {
             // No se ha registrado aún: ir a subir documentos por primera vez
             window.location.href = 'registro_cond.html';
           } else if (data.estado_cuenta === 'aprobado') {
-            // Cuenta lista y aprobada: ir a trabajar
+            // Cuenta aprobada: entrar al panel de trabajo
             window.location.href = 'conductor.html';
           } else if (data.estado_cuenta === 'suspendido') {
             mostrarMensaje("Tu cuenta de conductor se encuentra suspendida por la administración.", "error");
           } else {
-            // Cuenta en estado 'pendiente' o revisión: enviar directo a la pantalla de estatus
+            // Cuenta pendiente o en revisión: enviar directo a la pantalla de estatus
             window.location.href = 'index_status.html';
           }
 
         } catch (err) {
           console.error("Error al verificar modo conductor:", err);
-          window.location.href = 'index_status.html';
+          window.location.href = 'registro_cond.html';
         }
       }
-    };
-
-    window.cerrarSesion = async function() {
-      await supabaseClient.auth.signOut();
-      localStorage.clear();
-      window.location.href = 'index.html';
     };
 
     function mostrarMensaje(texto, tipo) {
