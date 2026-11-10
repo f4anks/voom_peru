@@ -14,6 +14,22 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- SDK de OneSignal para la recepción de notificaciones Push -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: "98bfb199-5190-4c51-93b0-2cffb11c79e7",
+        safari_web_id: "web.onesignal.auto.181829e1-xxxx-xxxx",
+        notifyButton: {
+          enable: true,
+        },
+      });
+    });
+  </script>
+
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <style>
@@ -74,6 +90,22 @@
     <div id="status-message" class="p-3.5 rounded-2xl text-xs text-center hidden font-bold border"></div>
   </div>
 
+  <!-- MODAL O CONTENEDOR PARA MOSTRAR ANUNCIOS EN TIEMPO REAL -->
+  <div id="modal-anuncio" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl border border-slate-100 text-center animate-in fade-in zoom-in duration-200">
+      <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold">
+        📢
+      </div>
+      <div>
+        <h3 id="anuncio-titulo" class="text-base font-black text-slate-900"></h3>
+        <p id="anuncio-mensaje" class="text-xs text-slate-600 mt-2 leading-relaxed"></p>
+      </div>
+      <button onclick="cerrarAnuncio()" class="w-full py-3 bg-slate-900 hover:bg-orange-600 text-white font-bold rounded-xl text-xs transition-colors shadow-lg">
+        Entendido
+      </button>
+    </div>
+  </div>
+
   <script>
     const SUPABASE_URL = 'https://gklquvthucityzgcamao.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
@@ -95,11 +127,46 @@
         if (greetingEl) {
           greetingEl.textContent = `Hola, ${nombre}`;
         }
+
+        // Inicializar la escucha en tiempo real de anuncios en este módulo principal
+        iniciarEscuchaAnuncios();
+
       } catch (err) {
         console.error("Error al validar sesión en selector:", err);
         if (greetingEl) greetingEl.textContent = `Hola, Usuario`;
       }
     });
+
+    // Función para escuchar nuevos anuncios de Supabase en tiempo real
+    function iniciarEscuchaAnuncios() {
+      supabaseClient
+        .channel('public:anuncios')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'anuncios' }, (payload) => {
+          const nuevoAnuncio = payload.new;
+          console.log("Nuevo anuncio detectado en el selector:", nuevoAnuncio);
+          mostrarModalAnuncio(nuevoAnuncio.titulo, nuevoAnuncio.mensaje);
+        })
+        .subscribe();
+    }
+
+    function mostrarModalAnuncio(titulo, mensaje) {
+      const modal = document.getElementById('modal-anuncio');
+      const titleEl = document.getElementById('anuncio-titulo');
+      const msgEl = document.getElementById('anuncio-mensaje');
+      
+      if (modal && titleEl && msgEl) {
+        titleEl.textContent = titulo || 'Aviso importante';
+        msgEl.textContent = mensaje || '';
+        modal.classList.remove('hidden');
+      }
+    }
+
+    window.cerrarAnuncio = function() {
+      const modal = document.getElementById('modal-anuncio');
+      if (modal) {
+        modal.classList.add('hidden');
+      }
+    }
 
     window.seleccionarModo = async function(modo) {
       if (modo === 'pasajero') {
@@ -115,7 +182,6 @@
           }
           const user = session.user;
 
-          // Consulta de estatus del perfil con límite de tiempo
           const consultaPerfil = supabaseClient
             .from('perfiles')
             .select('estado_cuenta, vehiculo_placa, dni')
@@ -135,21 +201,15 @@
           }
 
           const { data, error } = resultado;
-
-          // Verificar si ya envió el formulario anteriormente
           const tieneRegistroCompleto = data && (data.vehiculo_placa || data.dni);
 
-          // Validación estricta del flujo:
           if (error || !data || !tieneRegistroCompleto) {
-            // No se ha registrado aún: ir a subir documentos por primera vez
             window.location.href = 'registro_cond.html';
           } else if (data.estado_cuenta === 'aprobado') {
-            // Cuenta aprobada: entrar al panel de trabajo
             window.location.href = 'conductor.html';
           } else if (data.estado_cuenta === 'suspendido') {
             mostrarMensaje("Tu cuenta de conductor se encuentra suspendida por la administración.", "error");
           } else {
-            // Cuenta pendiente o en revisión: enviar directo a la pantalla de estatus
             window.location.href = 'index_status.html';
           }
 
