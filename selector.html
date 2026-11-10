@@ -119,10 +119,10 @@
           }
           const user = session.user;
 
-          // Consulta de estatus del perfil con límite de tiempo
+          // Consulta de estatus del perfil
           const consultaPerfil = supabaseClient
             .from('perfiles')
-            .select('estado_cuenta')
+            .select('estado_cuenta, vehiculo_placa, dni')
             .eq('id', user.id)
             .maybeSingle();
 
@@ -134,28 +134,31 @@
           try {
             resultado = await Promise.race([consultaPerfil, timeoutSupabase]);
           } catch (timeoutErr) {
-            window.location.href = 'registro_cond.html';
+            window.location.href = 'index_status.html';
             return;
           }
 
           const { data, error } = resultado;
 
-          // Validación estricta del flujo:
-          // 1 y 2. Si no hay registro o está pendiente/en revisión, va a 'registro_cond.html' a cargar documentos.
-          // 3 y 4. Solo entra a 'conductor.html' si el admin ya lo aprobó ('aprobado').
-          if (error || !data || !data.estado_cuenta || data.estado_cuenta === 'pendiente') {
+          // Verificar si ya envió el formulario anteriormente
+          const tieneRegistroCompleto = data && (data.vehiculo_placa || data.dni);
+
+          if (error || !data || !tieneRegistroCompleto) {
+            // No se ha registrado aún: ir a subir documentos por primera vez
             window.location.href = 'registro_cond.html';
           } else if (data.estado_cuenta === 'aprobado') {
+            // Cuenta lista y aprobada: ir a trabajar
             window.location.href = 'conductor.html';
           } else if (data.estado_cuenta === 'suspendido') {
             mostrarMensaje("Tu cuenta de conductor se encuentra suspendida por la administración.", "error");
           } else {
-            window.location.href = 'registro_cond.html';
+            // Cuenta en estado 'pendiente' o revisión: enviar directo a la pantalla de estatus
+            window.location.href = 'index_status.html';
           }
 
         } catch (err) {
           console.error("Error al verificar modo conductor:", err);
-          window.location.href = 'registro_cond.html';
+          window.location.href = 'index_status.html';
         }
       }
     };
