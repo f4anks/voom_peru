@@ -6,11 +6,11 @@ let supabaseClient = null;
 let map = null;
 let userMarker = null;
 let currentUser = null;
+let debounceTimer = null;
 
-// Ubicación de prueba fija en Lima, Perú
+// Ubicación por defecto de prueba (Lima, Perú)
 let userCoords = { lat: -12.046374, lng: -77.042793 };
 
-// Función para esperar la carga del SDK de Supabase
 function esperarSupabase(intentos = 15) {
   return new Promise((resolve, reject) => {
     const verificar = (restantes) => {
@@ -43,8 +43,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       nameEl.textContent = user.user_metadata?.full_name || user.email.split('@')[0];
     }
 
-    // Inicializar mapa dinámico centrado en Lima
     inicializarMapa();
+    configurarBuscadorDestino();
 
   } catch (err) {
     console.error("Error al iniciar pasajero:", err);
@@ -55,57 +55,111 @@ function inicializarMapa() {
   const mapContainer = document.getElementById('map');
   if (!mapContainer || typeof L === 'undefined') return;
 
-  // 1. Inicializar mapa Leaflet centrado en Lima, Perú
+  // 1. Crear mapa centrado en Lima
   map = L.map('map', { zoomControl: false }).setView([userCoords.lat, userCoords.lng], 15);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  // 2. Redibujar mapa para evitar pantalla en blanco en contenedores flex
   setTimeout(() => {
     if (map) map.invalidateSize();
   }, 300);
 
-  // 3. Colocar marcador inicial en Lima
-  userMarker = L.marker([userCoords.lat, userCoords.lng])
+  // Marcador editable
+  userMarker = L.marker([userCoords.lat, userCoords.lng], { draggable: true })
     .addTo(map)
-    .bindPopup("<b>Ubicación de prueba (Lima, Perú)</b>")
+    .bindPopup("<b>Origen del viaje</b><br>Arrastra o haz clic en el mapa para mover")
     .openPopup();
-  
-  const origenInput = document.getElementById('origen-txt');
-  if (origenInput) {
-    origenInput.value = "Lima, Perú (Ubicación de prueba)";
-  }
 
-  // Si en el futuro deseas activar GPS real del dispositivo, se descomenta este bloque:
-  /*
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        actualizarPosicionMapa(userCoords.lat, userCoords.lng);
-        if (origenInput) origenInput.value = "Tu ubicación actual";
-      },
-      (err) => {
-        console.warn("GPS denegado o no disponible, usando respaldo en Lima:", err);
-      },
-      { timeout: 5000, enableHighAccuracy: true }
-    );
-  }
-  */
+  obtenerDireccionPorCoords(userCoords.lat, userCoords.lng);
+
+  // --- HABILITAR SELECCIÓN MANUAL EN EL MAPA ---
+  map.on('click', (e) => {
+    const { lat, lng } = e.latlng;
+    actualizarPosicionOrigen(lat, lng);
+  });
+
+  // Permitir arrastrar el pin
+  userMarker.on('dragend', (e) => {
+    const pos = e.target.getLatLng();
+    actualizarPosicionOrigen(pos.lat, pos.lng);
+  });
 }
 
-function actualizarPosicionMapa(lat, lng) {
-  if (!map) return;
-  map.setView([lat, lng], 15);
-  map.invalidateSize();
-
+function actualizarPosicionOrigen(lat, lng) {
+  userCoords = { lat, lng };
   if (userMarker) {
     userMarker.setLatLng([lat, lng]);
-  } else {
-    userMarker = L.marker([lat, lng]).addTo(map).bindPopup("<b>Estás aquí</b>").openPopup();
   }
+  obtenerDireccionPorCoords(lat, lng);
+}
+
+// Convertir Coordenadas -> Texto de dirección (Geocodificación Inversa)
+async function obtenerDireccionPorCoords(lat, lng) {
+  const origenInput = document.getElementById('origen-txt');
+  if (origenInput) origenInput.value = "Obteniendo dirección...";
+
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&countrycodes=pe`);
+    const data = await res.json();
+    if (data && data.display_name && origenInput) {
+      // Formatear dirección corta
+      const partes = data.display_name.split(',');
+      const direccionCorta = partes.slice(0, 3).join(',');
+      origenInput.value = direccionCorta;
+    }
+  } catch (e) {
+    if (origenInput) origenInput.value = `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
+  }
+}
+
+// --- BUSCADOR EN TIEMPO REAL PARA EL DESTINO ---
+function configurarBuscadorDestino() {
+  const destinoInput = document.getElementById('destino-txt');
+  const sugerenciasBox = document.getElementById('sugerencias-destino');
+
+  if (!destinoInput || !sugerenciasBox) return;
+
+  destinoInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim();
+    clearTimeout(debounceTimer);
+
+    if (query.length < 3) {
+      sugerenciasBox.classList.add('hidden');
+      return;
+    }
+
+    debounceTimer = setTimeout(async () => {
+      try {
+        // Buscar direcciones en Perú
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=pe&limit=5`;
+        const res = await fetch(url);
+        const resultados = await res.json();
+
+        sugerenciasBox.innerHTML = '';
+        if (resultados.length === 0) {
+          sugerenciasBox.classList.add('hidden');
+          return;
+        }
+
+        resultados.forEach(item => {
+          const div = document.createElement('div');
+          div.className = "p-3 hover:bg-orange-50 cursor-pointer border-b border-slate-100 text-xs font-semibold text-slate-700 flex items-center space-x-2";
+          div.innerHTML = `<span>📍</span> <span>${item.display_name}</span>`;
+          div.onclick = () => {
+            destinoInput.value = item.display_name.split(',').slice(0, 3).join(',');
+            sugerenciasBox.classList.add('hidden');
+          };
+          sugerenciasBox.appendChild(div);
+        });
+
+        sugerenciasBox.classList.remove('hidden');
+      } catch (err) {
+        console.error("Error al buscar dirección:", err);
+      }
+    }, 400);
+  });
 }
 
 async function solicitarViaje() {
@@ -113,7 +167,7 @@ async function solicitarViaje() {
   const destino = destinoInput ? destinoInput.value.trim() : '';
 
   if (!destino) {
-    alert("Por favor ingresa la dirección de destino.");
+    alert("Por favor ingresa o selecciona la dirección de destino.");
     if (destinoInput) destinoInput.focus();
     return;
   }
@@ -126,7 +180,6 @@ async function solicitarViaje() {
   if (estadoBox) estadoBox.classList.remove('hidden');
 
   try {
-    // Obtener precio base según el servicio seleccionado en tarjetas
     const servicioActual = window.servicioSeleccionado || 'economico';
     const selectedCard = document.querySelector(`[data-service="${servicioActual}"]`);
     const precioBase = selectedCard ? parseFloat(selectedCard.querySelector('.price-tag').getAttribute('data-base')) : 5.00;
@@ -156,14 +209,5 @@ async function solicitarViaje() {
     alert("No se pudo enviar la solicitud: " + err.message);
     if (btnSolicitar) btnSolicitar.disabled = false;
     if (estadoBox) estadoBox.classList.add('hidden');
-  }
-}
-
-function logout() {
-  if (supabaseClient) {
-    supabaseClient.auth.signOut().then(() => {
-      localStorage.clear();
-      window.location.href = 'index.html';
-    });
   }
 }
