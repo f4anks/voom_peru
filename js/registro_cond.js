@@ -108,7 +108,7 @@ async function subirArchivoStorage(fileInputId, carpetaNombre) {
 
   const { data, error } = await supabaseClient
     .storage
-    .from('documentos')
+    .from('documentos-conductores')
     .upload(filePath, blobFinal, {
       contentType: 'image/jpeg',
       upsert: true
@@ -120,7 +120,7 @@ async function subirArchivoStorage(fileInputId, carpetaNombre) {
 
   const { data: publicUrlData } = supabaseClient
     .storage
-    .from('documentos')
+    .from('documentos-conductores')
     .getPublicUrl(filePath);
 
   return publicUrlData.publicUrl;
@@ -138,7 +138,7 @@ async function procesarRegistro(e) {
   try {
     mostrarMensaje('Subiendo documentación y fotografías capturadas...');
 
-    // 1. Subir archivos a Supabase Storage
+    // 1. Subir archivos a Supabase Storage (Bucket: documentos-conductores)
     const urlBrevete = await subirArchivoStorage('foto_brevete', 'brevete');
     const urlCarta = await subirArchivoStorage('foto_carta_conducta', 'carta_conducta');
     const urlTitulo = await subirArchivoStorage('foto_titulo_vehiculo', 'titulo_vehiculo');
@@ -176,7 +176,7 @@ async function procesarRegistro(e) {
         url_foto_titulo_vehiculo: urlTitulo,
         url_foto_frontal: urlFrontal,
         url_foto_lateral: urlLateral,
-        estado_cuenta: 'pendiente', // Deja la cuenta en espera de aprobación
+        estado_cuenta: 'pendiente',
         updated_at: new Date()
       })
       .eq('id', currentUser.id);
