@@ -1,402 +1,170 @@
-let coordsOrigen = null;
-let coordsDestino = null;
+// CONFIGURACIÓN DE SUPABASE
+const SUPABASE_URL = "https://gklquvthucityzgcamao.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM";
 
-// Configuración de Tarifas de Voom Perú (Soles)
-const CONFIG_TARIFA = {
-  precioBase: 4.00,      // Bajada de bandera (S/.)
-  precioPorKm: 2.50,     // Valor del kilómetro recorrible
-  tarifaMinima: 8.00     // Monto mínimo por viaje
-};
+let supabaseClient = null;
+let map = null;
+let userMarker = null;
+let currentUser = null;
+let userCoords = { lat: -12.046374, lng: -77.042793 }; // Coordenadas por defecto (Lima)
 
-document.addEventListener('DOMContentLoaded', () => {
-  cargarNombreUsuario();
-  
-  if (typeof verificarAnunciosGlobales === 'function') {
-    verificarAnunciosGlobales('pasajero');
-  }
-  
-  // 1. Inicializar mapa de Perú (Lima por defecto mientras carga GPS)
-  inicializarMapaPeru(-12.0464, -77.0428);
+// Esperar disponibilidad del SDK de Supabase
+function esperarSupabase(intentos = 15) {
+  return new Promise((resolve, reject) => {
+    const verificar = (restantes) => {
+      if (window.supabase && window.supabase.createClient) {
+        resolve(window.supabase);
+      } else if (restantes > 0) {
+        setTimeout(() => verificar(restantes - 1), 300);
+      } else {
+        reject(new Error("SDK Supabase no disponible"));
+      }
+    };
+    verificar(intentos);
+  });
+}
 
-  // 2. Escuchar clics en el mapa para fijar el Destino
-  window.onMapaClickCallback = async (lat, lng) => {
-    await establecerPuntoDestino(lat, lng);
-  };
-
-  // 3. Cargar GPS de entrada + Activar buscadores manuales
-  obtenerUbicacionUsuario();
-  inicializarBuscadorOrigenPeru();
-  inicializarBuscadorDestinoPeru();
-});
-
-// Cargar Nombre del Usuario
-async function cargarNombreUsuario() {
-  const userNameEl = document.getElementById('user-name');
-  if (!userNameEl) return;
-
-  const nombreLocal = localStorage.getItem('voom_user_name');
-  if (nombreLocal && nombreLocal.trim() !== '') {
-    userNameEl.textContent = nombreLocal;
-    return;
-  }
-
+window.addEventListener('DOMContentLoaded', async () => {
   try {
-    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (user) {
-        const { data: perfil } = await supabaseClient
-          .from('perfiles')
-          .select('nombre_completo')
-          .eq('id', user.id)
-          .single();
+    const supabaseLib = await esperarSupabase();
+    supabaseClient = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const nombre = perfil?.nombre_completo || user.user_metadata?.full_name || user.email.split('@')[0];
-        const nombreFormateado = nombre.charAt(0).toUpperCase() + nombre.slice(1);
-        
-        userNameEl.textContent = nombreFormateado;
-        localStorage.setItem('voom_user_name', nombreFormateado);
-        return;
-      }
-    }
-  } catch (err) {
-    console.error("Error consultando sesión:", err);
-  }
-
-  userNameEl.textContent = "Pasajero";
-}
-
-// 📍 BUSCADOR MANUAL DE ORIGEN (Permite cambiar el punto A si el usuario quiere)
-function inicializarBuscadorOrigenPeru() {
-  const inputOrigen = document.getElementById('origen-txt');
-  const contenedorSugerencias = document.getElementById('sugerencias-origen');
-  
-  if (!inputOrigen || !contenedorSugerencias) return;
-
-  let timeoutId;
-
-  inputOrigen.addEventListener('input', (e) => {
-    clearTimeout(timeoutId);
-    const query = e.target.value.trim();
-
-    if (query.length < 3) {
-      contenedorSugerencias.classList.add('hidden');
-      contenedorSugerencias.innerHTML = '';
-      return;
-    }
-
-    timeoutId = setTimeout(async () => {
-      try {
-        const data = await buscarDestinosPeru(query);
-
-        contenedorSugerencias.innerHTML = '';
-
-        if (data && data.length > 0) {
-          data.forEach(lugar => {
-            const item = document.createElement('div');
-            item.className = "px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 cursor-pointer border-b border-slate-100 last:border-none truncate";
-            item.textContent = lugar.display_name;
-
-            item.addEventListener('click', () => {
-              inputOrigen.value = lugar.display_name.split(',')[0]; 
-              contenedorSugerencias.classList.add('hidden');
-              
-              const lat = parseFloat(lugar.lat);
-              const lng = parseFloat(lugar.lon);
-              
-              // Actualizar Origen manual
-              coordsOrigen = { lat, lng };
-              actualizarMarcadorOrigen(lat, lng);
-              centrarMapa(lat, lng, 15);
-
-              // Recalcular precio si el destino ya estaba seleccionado
-              if (coordsDestino) {
-                calcularTarifaViaje();
-              }
-            });
-
-            contenedorSugerencias.appendChild(item);
-          });
-          contenedorSugerencias.classList.remove('hidden');
-        } else {
-          contenedorSugerencias.classList.add('hidden');
-        }
-      } catch (err) {
-        console.error("Error buscando sugerencias de origen:", err);
-      }
-    }, 400);
-  });
-
-  // Ocultar si hace clic fuera
-  document.addEventListener('click', (e) => {
-    if (!inputOrigen.contains(e.target) && !contenedorSugerencias.contains(e.target)) {
-      contenedorSugerencias.classList.add('hidden');
-    }
-  });
-}
-
-// 🏁 BUSCADOR MANUAL DE DESTINO (Punto B)
-function inicializarBuscadorDestinoPeru() {
-  const inputDestino = document.getElementById('destino-txt');
-  const contenedorSugerencias = document.getElementById('sugerencias-destino');
-  
-  if (!inputDestino || !contenedorSugerencias) return;
-
-  let timeoutId;
-
-  inputDestino.addEventListener('input', (e) => {
-    clearTimeout(timeoutId);
-    const query = e.target.value.trim();
-
-    if (query.length < 3) {
-      contenedorSugerencias.classList.add('hidden');
-      contenedorSugerencias.innerHTML = '';
-      return;
-    }
-
-    timeoutId = setTimeout(async () => {
-      try {
-        const data = await buscarDestinosPeru(query);
-
-        contenedorSugerencias.innerHTML = '';
-
-        if (data && data.length > 0) {
-          data.forEach(lugar => {
-            const item = document.createElement('div');
-            item.className = "px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-orange-50 hover:text-orange-600 cursor-pointer border-b border-slate-100 last:border-none truncate";
-            
-            const distanciaInfo = lugar.distancia_km ? ` (${lugar.distancia_km.toFixed(1)} km)` : '';
-            item.textContent = lugar.display_name + distanciaInfo;
-
-            item.addEventListener('click', async () => {
-              inputOrigenValue = lugar.display_name.split(',')[0]; 
-              inputDestino.value = lugar.display_name.split(',')[0]; 
-              contenedorSugerencias.classList.add('hidden');
-              
-              const lat = parseFloat(lugar.lat);
-              const lng = parseFloat(lugar.lon);
-              
-              await establecerPuntoDestino(lat, lng, lugar.display_name);
-            });
-
-            contenedorSugerencias.appendChild(item);
-          });
-          contenedorSugerencias.classList.remove('hidden');
-        } else {
-          contenedorSugerencias.classList.add('hidden');
-        }
-      } catch (err) {
-        console.error("Error buscando sugerencias en Perú:", err);
-      }
-    }, 400);
-  });
-
-  document.addEventListener('click', (e) => {
-    if (!inputDestino.contains(e.target) && !contenedorSugerencias.contains(e.target)) {
-      contenedorSugerencias.classList.add('hidden');
-    }
-  });
-}
-
-// Establecer Punto B (Destino)
-async function establecerPuntoDestino(lat, lng, nombrePersonalizado = null) {
-  coordsDestino = { lat, lng };
-
-  if (coordsOrigen) {
-    const distanciaKm = calcularDistanciaLineal(coordsOrigen.lat, coordsOrigen.lng, lat, lng);
-    if (distanciaKm > 50) {
-      alert("El destino seleccionado está fuera de la zona de cobertura actual.");
-      return;
-    }
-  }
-
-  actualizarMarcadorDestino(lat, lng);
-  centrarMapa(lat, lng, 15);
-
-  const inputDestino = document.getElementById('destino-txt');
-  if (nombrePersonalizado) {
-    const partes = nombrePersonalizado.split(',');
-    if (inputDestino) inputDestino.value = partes.slice(0, 2).join(',').trim();
-  } else {
-    try {
-      const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=es`;
-      const response = await fetch(url);
-      const data = await response.json();
-      if (inputDestino) {
-        inputDestino.value = data.locality || `Punto seleccionado (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-      }
-    } catch (e) {
-      if (inputDestino) inputDestino.value = `Punto seleccionado`;
-    }
-  }
-
-  calcularTarifaViaje();
-}
-
-// 📡 OBTENER GEOLOCALIZACIÓN (MODO PRUEBAS LIMA)
-function obtenerUbicacionUsuario() {
-  const inputOrigen = document.getElementById('origen-txt');
-
-  // 🧪 COORDENADAS FIJAS DE LIMA PARA PRUEBAS
-  const lat = -12.0464; 
-  const lng = -77.0428;
-  coordsOrigen = { lat, lng };
-
-  if (inputOrigen) inputOrigen.value = "Cercado de Lima, Perú";
-
-  centrarMapa(lat, lng, 15);
-  actualizarMarcadorOrigen(lat, lng);
-}
-
-// 💵 CÁLCULO DE TARIFA Y RUTA
-async function calcularTarifaViaje() {
-  if (!coordsOrigen || !coordsDestino) return;
-
-  const precioBox = document.getElementById('precio-box');
-  const distanciaTxt = document.getElementById('distancia-texto');
-  const precioMonto = document.getElementById('precio-monto');
-
-  try {
-    const urlRoute = `https://router.project-osrm.org/route/v1/driving/${coordsOrigen.lng},${coordsOrigen.lat};${coordsDestino.lng},${coordsDestino.lat}?overview=false`;
-    const response = await fetch(urlRoute);
-    const data = await response.json();
-
-    if (data.routes && data.routes.length > 0) {
-      const metros = data.routes[0].distance;
-      const kilometros = (metros / 1000).toFixed(2);
-
-      let precioFinal = CONFIG_TARIFA.precioBase + (kilometros * CONFIG_TARIFA.precioPorKm);
-      if (precioFinal < CONFIG_TARIFA.tarifaMinima) {
-        precioFinal = CONFIG_TARIFA.tarifaMinima;
-      }
-
-      if (distanciaTxt) distanciaTxt.textContent = `${kilometros} km de recorrido`;
-      if (precioMonto) precioMonto.textContent = `S/. ${precioFinal.toFixed(2)}`;
-      if (precioBox) precioBox.classList.remove('hidden');
-    }
-  } catch (err) {
-    console.error("Error al calcular la ruta:", err);
-  }
-}
-
-// Distancia lineal Haversine auxiliar
-function calcularDistanciaLineal(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-}
-
-// 🚀 CONFIRMAR Y CREAR LA SOLICITUD DE VIAJE
-async function solicitarViaje() {
-  // 1. Validaciones previas
-  if (!coordsOrigen || !coordsDestino) {
-    alert("Por favor selecciona un punto de origen y un destino válido.");
-    return;
-  }
-
-  const inputDestino = document.getElementById('destino-txt');
-  const direccionDestino = inputDestino ? inputDestino.value : "Destino seleccionado";
-  
-  const inputOrigen = document.getElementById('origen-txt');
-  const direccionOrigen = inputOrigen ? inputOrigen.value : "Origen actual";
-
-  const btnSolicitar = document.getElementById('btn-solicitar');
-  if (btnSolicitar) {
-    btnSolicitar.disabled = true;
-    btnSolicitar.textContent = "Procesando solicitud...";
-  }
-
-  try {
-    // 2. Obtener la sesión del usuario actual de Supabase
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) {
-      alert("Debes iniciar sesión para pedir un viaje.");
+    const { data: { user }, error } = await supabaseClient.auth.getUser();
+    if (error || !user) {
       window.location.href = 'index.html';
       return;
     }
+    currentUser = user;
 
-    // 3. Calcular la tarifa final nuevamente para asegurar consistencia
-    const distanciaKm = calcularDistanciaLineal(coordsOrigen.lat, coordsOrigen.lng, coordsDestino.lat, coordsDestino.lng);
-    let precioFinal = CONFIG_TARIFA.precioBase + (distanciaKm * CONFIG_TARIFA.precioPorKm);
-    if (precioFinal < CONFIG_TARIFA.tarifaMinima) {
-      precioFinal = CONFIG_TARIFA.tarifaMinima;
+    const nameEl = document.getElementById('user-name');
+    if (nameEl) {
+      nameEl.textContent = user.user_metadata?.full_name || user.email.split('@')[0];
     }
 
-    // 4. Insertar el viaje en la tabla 'viajes' de Supabase
-    const { data: viajeCreado, error } = await supabaseClient
-      .from('viajes')
-      .insert([
-        {
-          pasajero_id: user.id,
-          origen_lat: coordsOrigen.lat,
-          origen_lng: coordsOrigen.lng,
-          origen_direccion: direccionOrigen,
-          destino_lat: coordsDestino.lat,
-          destino_lng: coordsDestino.lng,
-          destino_direccion: direccionDestino,
-          distancia_km: parseFloat(distanciaKm.toFixed(2)),
-          precio: parseFloat(precioFinal.toFixed(2)),
-          estado: 'buscando'
-        }
-      ])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // 5. Ocultar inputs y mostrar estatus de búsqueda al pasajero
-    document.querySelector('.space-y-3').classList.add('hidden'); // Ocultar formulario de búsqueda
-    
-    const estadoBox = document.getElementById('estado-viaje-box');
-    const estadoTexto = document.getElementById('estado-viaje-texto');
-    if (estadoBox && estadoTexto) {
-      estadoTexto.textContent = "Buscando un conductor cercano en Voom...";
-      estadoBox.classList.remove('hidden');
-    }
-
-    // 6. Activar escucha en tiempo real para este viaje específico
-    escucharEstadoViaje(viajeCreado.id);
+    // Inicializar mapa y geolocalización
+    inicializarMapa();
 
   } catch (err) {
-    console.error("Error al solicitar el viaje:", err);
-    alert("No se pudo procesar la solicitud: " + err.message);
-    if (btnSolicitar) {
-      btnSolicitar.disabled = false;
-      btnSolicitar.textContent = "Confirmar Solicitud 🚀";
+    console.error("Error al iniciar pasajero:", err);
+  }
+});
+
+function inicializarMapa() {
+  const mapContainer = document.getElementById('map');
+  if (!mapContainer || typeof L === 'undefined') return;
+
+  // 1. Crear el mapa Leaflet
+  map = L.map('map', { zoomControl: false }).setView([userCoords.lat, userCoords.lng], 14);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Forzar redibujado de Leaflet para evitar pantalla en blanco
+  setTimeout(() => {
+    if (map) map.invalidateSize();
+  }, 300);
+
+  // 2. Obtener ubicación en tiempo real
+  const origenInput = document.getElementById('origen-txt');
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        userCoords = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        };
+
+        actualizarPosicionMapa(userCoords.lat, userCoords.lng);
+        if (origenInput) {
+          origenInput.value = "Tu ubicación actual";
+        }
+      },
+      (err) => {
+        console.warn("GPS no disponible o denegado, usando ubicación por defecto:", err);
+        actualizarPosicionMapa(userCoords.lat, userCoords.lng);
+        if (origenInput) {
+          origenInput.value = "Ubicación aproximada (Lima)";
+        }
+      },
+      { timeout: 7000, enableHighAccuracy: true }
+    );
+  } else {
+    actualizarPosicionMapa(userCoords.lat, userCoords.lng);
+    if (origenInput) {
+      origenInput.value = "Ubicación aproximada (Lima)";
     }
   }
 }
 
-// 📡 ESCUCHAR CAMBIOS EN TIEMPO REAL PARA EL PASAJERO
-function escucharEstadoViaje(viajeId) {
-  supabaseClient
-    .channel(`viaje-pasajero-${viajeId}`)
-    .on(
-      'postgres_changes',
-      { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'viajes', 
-        filter: `id=eq.${viajeId}` 
-      },
-      (payload) => {
-        const viajeActualizado = payload.new;
-        const estadoTexto = document.getElementById('estado-viaje-texto');
+function actualizarPosicionMapa(lat, lng) {
+  if (!map) return;
+  map.setView([lat, lng], 15);
+  map.invalidateSize();
 
-        if (viajeActualizado.estado === 'aceptado') {
-          if (estadoTexto) {
-            estadoTexto.textContent = "¡Conductor asignado! Dirigiéndose a tu ubicación 🚗";
-          }
-          // Aquí más adelante cargaremos los datos del conductor y dibujaremos su ruta hacia el pasajero
-        } else if (viajeActualizado.estado === 'completado') {
-          if (estadoTexto) {
-            estadoTexto.textContent = "¡Has llegado a tu destino! Viaje finalizado 🎉";
-          }
-        }
-      }
-    )
-    .subscribe();
+  if (userMarker) {
+    userMarker.setLatLng([lat, lng]);
+  } else {
+    userMarker = L.marker([lat, lng]).addTo(map).bindPopup("<b>Estás aquí</b>").openPopup();
+  }
+}
+
+async function solicitarViaje() {
+  const destinoInput = document.getElementById('destino-txt');
+  const destino = destinoInput ? destinoInput.value.trim() : '';
+
+  if (!destino) {
+    alert("Por favor ingresa la dirección de destino.");
+    if (destinoInput) destinoInput.focus();
+    return;
+  }
+
+  const btnSolicitar = document.getElementById('btn-solicitar');
+  const estadoBox = document.getElementById('estado-viaje-box');
+  const estadoTexto = document.getElementById('estado-viaje-texto');
+
+  if (btnSolicitar) btnSolicitar.disabled = true;
+  if (estadoBox) estadoBox.classList.remove('hidden');
+
+  try {
+    // Obtener precio base de la tarjeta activa elegida en HTML
+    const selectedCard = document.querySelector(`[data-service="${window.servicioSeleccionado || 'economico'}"]`);
+    const precioBase = selectedCard ? parseFloat(selectedCard.querySelector('.price-tag').getAttribute('data-base')) : 5.00;
+
+    const { error } = await supabaseClient
+      .from('viajes')
+      .insert({
+        pasajero_id: currentUser.id,
+        tipo_servicio: window.servicioSeleccionado || 'economico',
+        origen_lat: userCoords.lat,
+        origen_lng: userCoords.lng,
+        destino_direccion: destino,
+        precio: precioBase,
+        estado: 'buscando'
+      });
+
+    if (error) throw error;
+
+    if (estadoTexto) estadoTexto.textContent = "🚀 ¡Viaje solicitado! Buscando conductor cercano...";
+
+    setTimeout(() => {
+      window.location.href = 'selector.html';
+    }, 2000);
+
+  } catch (err) {
+    console.error("Error al solicitar viaje:", err);
+    alert("No se pudo enviar la solicitud: " + err.message);
+    if (btnSolicitar) btnSolicitar.disabled = false;
+    if (estadoBox) estadoBox.classList.add('hidden');
+  }
+}
+
+function logout() {
+  if (supabaseClient) {
+    supabaseClient.auth.signOut().then(() => {
+      localStorage.clear();
+      window.location.href = 'index.html';
+    });
+  }
 }
