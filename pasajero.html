@@ -103,7 +103,7 @@
         <div id="sugerencias-destino" class="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-48 overflow-y-auto hidden divide-y divide-slate-100"></div>
       </div>
 
-      <!-- SERVICIOS CON DISEÑO PREMIUM Y ATRACTIVO -->
+      <!-- TARJETAS DE SERVICIOS CON ILUSTRACIONES DE VEHÍCULOS / CAJAS -->
       <div class="space-y-2 pt-1">
         <div class="flex items-center justify-between px-1">
           <label class="text-[11px] font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -115,116 +115,139 @@
         
         <div class="flex gap-3 overflow-x-auto no-scrollbar pb-2 pt-1" id="lista-servicios-pasajero">
           
-          <!-- Envíos (Flash) -->
+          <!-- 1. Envíos (Moto con caja) -->
           <div onclick="seleccionarServicio('moto')" 
-               class="service-card cursor-pointer border-2 border-slate-200 bg-white p-4 rounded-3xl flex flex-col justify-between transition-all duration-300 active:scale-95 shadow-xs hover:border-slate-300 shrink-0 w-38 relative overflow-hidden group" 
+               class="service-card cursor-pointer border-2 border-slate-200 bg-white p-3.5 rounded-3xl flex flex-col justify-between transition-all duration-300 active:scale-95 shadow-xs hover:border-slate-300 shrink-0 w-38 relative overflow-hidden group" 
                data-service="moto">
-            <div class="absolute -right-4 -top-4 w-16 h-16 bg-slate-100 rounded-full group-hover:scale-125 transition-transform"></div>
+            <div class="absolute -right-4 -top-4 w-16 h-16 bg-amber-100/50 rounded-full group-hover:scale-125 transition-transform"></div>
             <div>
-              <div class="flex justify-between items-start mb-2.5">
-                <div class="w-11 h-11 bg-gradient-to-tr from-amber-500 to-orange-500 text-white rounded-2xl flex items-center justify-center shadow-md shadow-orange-500/20 group-hover:rotate-6 transition-transform">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              <div class="flex justify-between items-start mb-2">
+                <!-- Ilustración Vectorial Detallada de Moto con Caja -->
+                <div class="w-12 h-12 bg-gradient-to-tr from-amber-500 to-orange-500 text-white rounded-2xl flex items-center justify-center shadow-md shadow-orange-500/25 group-hover:scale-110 transition-transform">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 17h-2v-4h2v4zm14 0h-2v-4h2v4z"></path>
+                    <circle cx="7" cy="17" r="2"></circle>
+                    <circle cx="17" cy="17" r="2"></circle>
+                    <path d="M5 17h2v-4h4l3 3h3v-2h-2l-2-3h-4l-2 2h-1v-2H3v4h2z"></path>
+                    <rect x="9" y="6" width="6" height="5" rx="1"></rect>
                   </svg>
                 </div>
-                <span class="bg-slate-100 text-slate-700 text-[8px] font-black px-2 py-0.5 rounded-full uppercase">Flash</span>
+                <span class="bg-amber-50 text-amber-700 text-[8px] font-black px-2 py-0.5 rounded-full uppercase border border-amber-200">Flash</span>
               </div>
               <h4 class="text-xs font-black text-slate-900">Envíos</h4>
-              <p class="text-[9px] text-slate-400 font-bold leading-tight mt-0.5">Paquetes rápidos</p>
+              <p class="text-[9px] text-slate-400 font-bold leading-tight mt-0.5">Moto con caja</p>
             </div>
-            <div class="mt-4 pt-2.5 border-t border-slate-100 flex justify-between items-end">
+            <div class="mt-3 pt-2 border-t border-slate-100 flex justify-between items-end">
               <span class="text-[9px] font-extrabold text-slate-400">Desde</span>
               <span class="text-xs font-black text-slate-900 price-tag" id="precio-moto">S/ --</span>
             </div>
           </div>
 
-          <!-- Económico (POR DEFECTO DESTACADO) -->
+          <!-- 2. Económico (Carro Estándar) -->
           <div onclick="seleccionarServicio('economico')" 
-               class="service-card card-selected cursor-pointer border-2 border-orange-500 p-4 rounded-3xl flex flex-col justify-between transition-all duration-300 active:scale-95 shrink-0 w-38 relative overflow-hidden ring-4 ring-orange-500/10" 
+               class="service-card card-selected cursor-pointer border-2 border-orange-500 p-3.5 rounded-3xl flex flex-col justify-between transition-all duration-300 active:scale-95 shrink-0 w-38 relative overflow-hidden ring-4 ring-orange-500/10" 
                data-service="economico">
             <div class="absolute -right-4 -top-4 w-16 h-16 bg-orange-500/10 rounded-full"></div>
             <div>
-              <div class="flex justify-between items-start mb-2.5">
-                <div class="w-11 h-11 bg-gradient-to-tr from-orange-500 via-orange-600 to-amber-500 text-white rounded-2xl flex items-center justify-center shadow-md shadow-orange-500/30 group-hover:rotate-6 transition-transform">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h8m-8 5h8m-4 5h4M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
+              <div class="flex justify-between items-start mb-2">
+                <!-- Ilustración Vectorial Detallada de Carro -->
+                <div class="w-12 h-12 bg-gradient-to-tr from-orange-500 via-orange-600 to-amber-500 text-white rounded-2xl flex items-center justify-center shadow-md shadow-orange-500/30 group-hover:scale-110 transition-transform">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 17h14v-4H5v4z"></path>
+                    <path d="M3 13l2-5h14l2 5H3z"></path>
+                    <circle cx="7.5" cy="17.5" r="1.5"></circle>
+                    <circle cx="16.5" cy="17.5" r="1.5"></circle>
+                    <path d="M8 8h8"></path>
                   </svg>
                 </div>
                 <span class="bg-emerald-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase shadow-xs">Top</span>
               </div>
               <h4 class="text-xs font-black text-slate-900">Económico</h4>
-              <p class="text-[9px] text-slate-500 font-bold leading-tight mt-0.5">Estándar</p>
+              <p class="text-[9px] text-slate-500 font-bold leading-tight mt-0.5">Carro estándar</p>
             </div>
-            <div class="mt-4 pt-2.5 border-t border-orange-200 flex justify-between items-end">
+            <div class="mt-3 pt-2 border-t border-orange-200 flex justify-between items-end">
               <span class="text-[9px] font-black text-orange-600">Popular</span>
               <span class="text-xs font-black text-orange-600 price-tag" id="precio-economico">S/ --</span>
             </div>
           </div>
 
-          <!-- Confort -->
+          <!-- 3. Confort (Auto Moderno con A/C) -->
           <div onclick="seleccionarServicio('confort')" 
-               class="service-card cursor-pointer border-2 border-slate-200 bg-white p-4 rounded-3xl flex flex-col justify-between transition-all duration-300 active:scale-95 shadow-xs hover:border-slate-300 shrink-0 w-38 relative overflow-hidden group" 
+               class="service-card cursor-pointer border-2 border-slate-200 bg-white p-3.5 rounded-3xl flex flex-col justify-between transition-all duration-300 active:scale-95 shadow-xs hover:border-slate-300 shrink-0 w-38 relative overflow-hidden group" 
                data-service="confort">
-            <div class="absolute -right-4 -top-4 w-16 h-16 bg-slate-100 rounded-full group-hover:scale-125 transition-transform"></div>
+            <div class="absolute -right-4 -top-4 w-16 h-16 bg-emerald-50 rounded-full group-hover:scale-125 transition-transform"></div>
             <div>
-              <div class="flex justify-between items-start mb-2.5">
-                <div class="w-11 h-11 bg-gradient-to-tr from-emerald-500 to-teal-600 text-white rounded-2xl flex items-center justify-center shadow-md shadow-emerald-500/20 group-hover:rotate-6 transition-transform">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              <div class="flex justify-between items-start mb-2">
+                <!-- Ilustración Vectorial Sedan/Confort -->
+                <div class="w-12 h-12 bg-gradient-to-tr from-emerald-500 to-teal-600 text-white rounded-2xl flex items-center justify-center shadow-md shadow-emerald-500/20 group-hover:scale-110 transition-transform">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path>
+                    <circle cx="7" cy="17" r="2"></circle>
+                    <circle cx="17" cy="17" r="2"></circle>
                   </svg>
                 </div>
-                <span class="bg-emerald-50 text-emerald-700 text-[8px] font-black px-2 py-0.5 rounded-full uppercase">A/C</span>
+                <span class="bg-emerald-50 text-emerald-700 text-[8px] font-black px-2 py-0.5 rounded-full uppercase border border-emerald-200">A/C</span>
               </div>
               <h4 class="text-xs font-black text-slate-900">Confort</h4>
-              <p class="text-[9px] text-slate-400 font-bold leading-tight mt-0.5">Auto Moderno</p>
+              <p class="text-[9px] text-slate-400 font-bold leading-tight mt-0.5">Auto moderno</p>
             </div>
-            <div class="mt-4 pt-2.5 border-t border-slate-100 flex justify-between items-end">
+            <div class="mt-3 pt-2 border-t border-slate-100 flex justify-between items-end">
               <span class="text-[9px] font-extrabold text-slate-400">Premium</span>
               <span class="text-xs font-black text-slate-900 price-tag" id="precio-confort">S/ --</span>
             </div>
           </div>
 
-          <!-- Flete -->
+          <!-- 4. Flete (Camioneta de carga) -->
           <div onclick="seleccionarServicio('flete')" 
-               class="service-card cursor-pointer border-2 border-slate-200 bg-white p-4 rounded-3xl flex flex-col justify-between transition-all duration-300 active:scale-95 shadow-xs hover:border-slate-300 shrink-0 w-38 relative overflow-hidden group" 
+               class="service-card cursor-pointer border-2 border-slate-200 bg-white p-3.5 rounded-3xl flex flex-col justify-between transition-all duration-300 active:scale-95 shadow-xs hover:border-slate-300 shrink-0 w-38 relative overflow-hidden group" 
                data-service="flete">
-            <div class="absolute -right-4 -top-4 w-16 h-16 bg-slate-100 rounded-full group-hover:scale-125 transition-transform"></div>
+            <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-50 rounded-full group-hover:scale-125 transition-transform"></div>
             <div>
-              <div class="flex justify-between items-start mb-2.5">
-                <div class="w-11 h-11 bg-gradient-to-tr from-blue-600 to-indigo-700 text-white rounded-2xl flex items-center justify-center shadow-md shadow-blue-500/20 group-hover:rotate-6 transition-transform">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              <div class="flex justify-between items-start mb-2">
+                <!-- Ilustración Vectorial Camioneta de Carga -->
+                <div class="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-700 text-white rounded-2xl flex items-center justify-center shadow-md shadow-blue-500/20 group-hover:scale-110 transition-transform">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12h12z"></path>
+                    <path d="M14 8h5l3 3v7h-8"></path>
+                    <circle cx="7" cy="18" r="2"></circle>
+                    <circle cx="17" cy="18" r="2"></circle>
                   </svg>
                 </div>
-                <span class="bg-blue-50 text-blue-700 text-[8px] font-black px-2 py-0.5 rounded-full uppercase">Carga</span>
+                <span class="bg-blue-50 text-blue-700 text-[8px] font-black px-2 py-0.5 rounded-full uppercase border border-blue-200">Carga</span>
               </div>
               <h4 class="text-xs font-black text-slate-900">Flete</h4>
               <p class="text-[9px] text-slate-400 font-bold leading-tight mt-0.5">Camioneta</p>
             </div>
-            <div class="mt-4 pt-2.5 border-t border-slate-100 flex justify-between items-end">
+            <div class="mt-3 pt-2 border-t border-slate-100 flex justify-between items-end">
               <span class="text-[9px] font-extrabold text-slate-400">Objetos</span>
               <span class="text-xs font-black text-slate-900 price-tag" id="precio-flete">S/ --</span>
             </div>
           </div>
 
-          <!-- Grúa -->
+          <!-- 5. Grúa (Camión de auxilio / Remolque) -->
           <div onclick="seleccionarServicio('grua')" 
-               class="service-card cursor-pointer border-2 border-slate-200 bg-white p-4 rounded-3xl flex flex-col justify-between transition-all duration-300 active:scale-95 shadow-xs hover:border-slate-300 shrink-0 w-38 relative overflow-hidden group" 
+               class="service-card cursor-pointer border-2 border-slate-200 bg-white p-3.5 rounded-3xl flex flex-col justify-between transition-all duration-300 active:scale-95 shadow-xs hover:border-slate-300 shrink-0 w-38 relative overflow-hidden group" 
                data-service="grua">
-            <div class="absolute -right-4 -top-4 w-16 h-16 bg-slate-100 rounded-full group-hover:scale-125 transition-transform"></div>
+            <div class="absolute -right-4 -top-4 w-16 h-16 bg-red-50 rounded-full group-hover:scale-125 transition-transform"></div>
             <div>
-              <div class="flex justify-between items-start mb-2.5">
-                <div class="w-11 h-11 bg-gradient-to-tr from-red-500 to-rose-600 text-white rounded-2xl flex items-center justify-center shadow-md shadow-red-500/20 group-hover:rotate-6 transition-transform">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <div class="flex justify-between items-start mb-2">
+                <!-- Ilustración Vectorial Grúa / Auxilio -->
+                <div class="w-12 h-12 bg-gradient-to-tr from-red-500 to-rose-600 text-white rounded-2xl flex items-center justify-center shadow-md shadow-red-500/20 group-hover:scale-110 transition-transform">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 17h20"></path>
+                    <path d="M6 17v-4h9v4"></path>
+                    <path d="M15 13l4-5h3v5"></path>
+                    <path d="M9 9V5h6v4"></path>
+                    <circle cx="7" cy="17" r="2"></circle>
+                    <circle cx="17" cy="17" r="2"></circle>
                   </svg>
                 </div>
-                <span class="bg-red-50 text-red-700 text-[8px] font-black px-2 py-0.5 rounded-full uppercase">Auxilio</span>
+                <span class="bg-red-50 text-red-700 text-[8px] font-black px-2 py-0.5 rounded-full uppercase border border-red-200">Auxilio</span>
               </div>
               <h4 class="text-xs font-black text-slate-900">Grúa</h4>
               <p class="text-[9px] text-slate-400 font-bold leading-tight mt-0.5">Remolque</p>
             </div>
-            <div class="mt-4 pt-2.5 border-t border-slate-100 flex justify-between items-end">
+            <div class="mt-3 pt-2 border-t border-slate-100 flex justify-between items-end">
               <span class="text-[9px] font-extrabold text-red-500">24/7</span>
               <span class="text-xs font-black text-slate-900 price-tag" id="precio-grua">S/ --</span>
             </div>
