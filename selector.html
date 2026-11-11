@@ -29,6 +29,14 @@
           enable: true,
         },
       });
+
+      // Escuchar cuando el usuario hace clic en una notificación Push
+      OneSignal.Notifications.addEventListener("click", (event) => {
+        const notif = event.notification;
+        const titulo = notif.title || "Aviso Importante";
+        const mensaje = notif.body || "";
+        mostrarLectorPush(titulo, mensaje);
+      });
     });
   </script>
 
@@ -92,7 +100,26 @@
     <div id="status-message" class="p-3.5 rounded-2xl text-xs text-center hidden font-bold border"></div>
   </div>
 
-  <!-- MODAL O CONTENEDOR PARA MOSTRAR ANUNCIOS EN TIEMPO REAL -->
+  <!-- MODAL DE LECTURA PUSH AL HACER CLIC (CON CONTEO RECREATIVO DE 3 SEGUNDOS) -->
+  <div id="modal-lector-push" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl border border-slate-100 text-center animate-in fade-in zoom-in duration-200">
+      <div class="w-14 h-14 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center mx-auto text-3xl font-bold">
+        📢
+      </div>
+      <div>
+        <h3 id="push-titulo" class="text-lg font-black text-slate-900"></h3>
+        <p id="push-mensaje" class="text-xs text-slate-600 mt-3 leading-relaxed bg-slate-50 p-3.5 rounded-2xl border border-slate-200/60 font-medium"></p>
+      </div>
+      <div class="space-y-2">
+        <p id="push-contador" class="text-[11px] font-bold text-orange-600 animate-pulse">Cerrando aviso en 3 segundos...</p>
+        <button onclick="cerrarLectorPush()" class="w-full py-3 bg-slate-900 hover:bg-orange-600 text-white font-bold rounded-xl text-xs transition-colors shadow-lg">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PARA ANUNCIOS EN TIEMPO REAL (APP ABIERTA) -->
   <div id="modal-anuncio" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl border border-slate-100 text-center animate-in fade-in zoom-in duration-200">
       <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold">
@@ -113,6 +140,8 @@
     const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    let temporizadorPush = null;
+
     document.addEventListener('DOMContentLoaded', async () => {
       const greetingEl = document.getElementById('user-greeting');
       
@@ -130,7 +159,6 @@
           greetingEl.textContent = `Hola, ${nombre}`;
         }
 
-        // Inicializar la escucha en tiempo real de anuncios en este módulo principal
         iniciarEscuchaAnuncios();
 
       } catch (err) {
@@ -139,7 +167,39 @@
       }
     });
 
-    // Función para escuchar nuevos anuncios de Supabase en tiempo real
+    function mostrarLectorPush(titulo, mensaje) {
+      const modal = document.getElementById('modal-lector-push');
+      const titleEl = document.getElementById('push-titulo');
+      const msgEl = document.getElementById('push-mensaje');
+      const contadorEl = document.getElementById('push-contador');
+
+      if (modal && titleEl && msgEl) {
+        titleEl.textContent = titulo;
+        msgEl.textContent = mensaje;
+        modal.classList.remove('hidden');
+
+        let segundos = 3;
+        contadorEl.textContent = `Cerrando aviso en ${segundos} segundos...`;
+
+        if (temporizadorPush) clearInterval(temporizadorPush);
+
+        temporizadorPush = setInterval(() => {
+          segundos--;
+          if (segundos > 0) {
+            contadorEl.textContent = `Cerrando aviso en ${segundos} segundos...`;
+          } else {
+            cerrarLectorPush();
+          }
+        }, 1000);
+      }
+    }
+
+    window.cerrarLectorPush = function() {
+      if (temporizadorPush) clearInterval(temporizadorPush);
+      const modal = document.getElementById('modal-lector-push');
+      if (modal) modal.classList.add('hidden');
+    }
+
     function iniciarEscuchaAnuncios() {
       supabaseClient
         .channel('public:anuncios')
