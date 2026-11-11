@@ -36,13 +36,13 @@
     }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
+<body class="bg-slate-100 text-slate-800 min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden pb-24 sm:pb-6">
 
   <!-- Adornos gráficos -->
   <div class="absolute -top-24 -left-24 w-80 h-80 bg-orange-400/15 rounded-full blur-3xl pointer-events-none"></div>
   <div class="absolute -bottom-24 -right-24 w-80 h-80 bg-amber-400/15 rounded-full blur-3xl pointer-events-none"></div>
 
-  <!-- OVERLAY DE INSTALACIÓN PWA -->
+  <!-- OVERLAY DE INSTALACIÓN PWA (Android / Desktop) -->
   <div id="pwa-install-overlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[9999] flex items-center justify-center p-6 text-center hidden">
     <div class="max-w-sm w-full bg-white border border-slate-200/80 p-8 rounded-3xl shadow-2xl relative overflow-hidden space-y-6">
       <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-tr from-orange-500 to-amber-500 rounded-3xl text-white shadow-xl shadow-orange-500/30">
@@ -59,10 +59,23 @@
       <button id="btn-pwa-install" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-orange-500/30 text-sm tracking-wide active:scale-[0.98]">
         Instalar Aplicación Oficial 🚀
       </button>
-      <div id="ios-instructions" class="hidden text-left bg-slate-50 p-4 rounded-2xl border border-slate-200 text-[11px] text-slate-600 space-y-1">
-        <p class="font-bold text-orange-600">En iPhone / iOS:</p>
-        <p>1. Toca el botón <strong>Compartir</strong> en Safari.</p>
-        <p>2. Selecciona <strong>"Agregar al inicio"</strong>.</p>
+    </div>
+  </div>
+
+  <!-- BANNER FLOTANTE EXCLUSIVO PARA iPHONE (Guía visual inteligente) -->
+  <div id="ios-installer-banner" class="fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-slate-900/95 text-white p-4 rounded-3xl shadow-2xl z-[9999] hidden border border-slate-700/50 backdrop-blur-md animate-bounce">
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-gradient-to-tr from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center text-xl shrink-0">
+          📲
+        </div>
+        <div>
+          <p class="text-xs font-black tracking-wide text-white">Instalar Voom en tu iPhone</p>
+          <p class="text-[10px] text-slate-300 mt-0.5">Toca <span class="text-orange-400 font-extrabold">Compartir ⎘</span> y luego <span class="text-orange-400 font-extrabold">"Agregar al inicio" ➕</span></p>
+        </div>
+      </div>
+      <div class="text-2xl animate-pulse text-orange-400 shrink-0">
+        👇
       </div>
     </div>
   </div>
@@ -299,11 +312,11 @@
       }
     }
 
+    // Manejo inteligente de PWA para Android vs iOS
     let deferredPrompt = null;
     const overlay = document.getElementById('pwa-install-overlay');
     const appContent = document.getElementById('app-content');
-    const btnInstall = document.getElementById('btn-pwa-install');
-    const iosInstructions = document.getElementById('ios-instructions');
+    const iosBanner = document.getElementById('ios-installer-banner');
 
     function isRunningStandalone() {
       return (window.matchMedia('(display-mode: standalone)').matches) || 
@@ -312,12 +325,22 @@
     }
 
     function checkPWAState() {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
       if (isRunningStandalone()) {
         if (overlay) overlay.classList.add('hidden');
+        if (iosBanner) iosBanner.classList.add('hidden');
         if (appContent) appContent.classList.remove('hidden');
       } else {
-        if (overlay) overlay.classList.remove('hidden');
-        if (appContent) appContent.classList.add('hidden');
+        if (isIOS) {
+          // En iPhone mostramos el banner flotante animado apuntando a la barra de Safari
+          if (overlay) overlay.classList.add('hidden');
+          if (iosBanner) iosBanner.classList.remove('hidden');
+        } else {
+          // En Android/PC mostramos la tarjeta modal de bloqueo
+          if (overlay) overlay.classList.remove('hidden');
+          if (iosBanner) iosBanner.classList.add('hidden');
+        }
       }
     }
 
@@ -329,7 +352,7 @@
     });
 
     document.addEventListener('click', async (e) => {
-      const target = e.target.closest('#btn-pwa-install, #btn-pwa-install-forced');
+      const target = e.target.closest('#btn-pwa-install');
       if (!target) return;
 
       if (deferredPrompt) {
@@ -340,23 +363,7 @@
           if (appContent) appContent.classList.remove('hidden');
         }
         deferredPrompt = null;
-        return;
       }
-
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-      if (isIOS) {
-        if (iosInstructions) iosInstructions.classList.remove('hidden');
-        return;
-      }
-
-      let msgBox = document.getElementById('install-msg-box');
-      if (!msgBox) {
-        msgBox = document.createElement('div');
-        msgBox.id = 'install-msg-box';
-        msgBox.className = 'mt-3 p-3 bg-orange-50 border border-orange-200 rounded-2xl text-[11px] font-bold text-orange-800 text-center';
-        target.insertAdjacentElement('afterend', msgBox);
-      }
-      msgBox.innerHTML = "💡 Para instalar en PC, haz clic en el icono de instalación ubicado al lado de la barra de direcciones.";
     });
 
     if ('serviceWorker' in navigator) {
