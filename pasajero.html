@@ -22,16 +22,13 @@
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
     #map { height: 100vh; width: 100%; z-index: 1; }
-    
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
     .glass-panel {
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
     }
-    
     .card-selected {
       background: linear-gradient(145deg, #ffffff 0%, #fff7ed 100%);
       border-color: #f97316 !important;
@@ -54,9 +51,8 @@
         <span class="text-[9px] text-orange-600 font-extrabold uppercase tracking-widest">Perú Edition</span>
       </div>
     </div>
-
     <div class="flex items-center space-x-3">
-      <span id="user-name" class="hidden sm:inline text-xs font-bold text-slate-600">Cargando...</span>
+      <span id="user-name" class="text-xs font-bold text-slate-600">Usuario</span>
       <a href="selector.html" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3.5 py-2 rounded-xl transition-all border border-slate-200">
         ✕ Salir
       </a>
@@ -70,7 +66,6 @@
     <!-- Banner Flotante Inferior -->
     <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-lg glass-panel p-5 sm:p-6 rounded-[2.5rem] border border-slate-200 shadow-[0_20px_40px_rgba(0,0,0,0.08)] z-[1000] space-y-4">
       
-      <!-- Indicador de Tiempo Real -->
       <div class="flex items-center justify-between pb-1 border-b border-slate-100">
         <div class="flex items-center gap-2">
           <div class="w-2.5 h-2.5 bg-orange-500 rounded-full animate-ping"></div>
@@ -81,29 +76,24 @@
         </span>
       </div>
       
-      <!-- Inputs de Dirección (Origen A y Destino B) -->
       <div class="space-y-2.5 relative">
-        <!-- Origen (Punto A) -->
         <div class="relative flex items-center">
           <div class="w-4 h-4 bg-emerald-500 rounded-full border-2 border-white shadow-sm absolute left-4 z-10 flex items-center justify-center">
             <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
           </div>
-          <input type="text" id="origen-txt" onclick="activarModoSeleccion('origen')" placeholder="Origen (Click mapa o arrastra pin A)..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all shadow-inner cursor-pointer" />
+          <input type="text" id="origen-txt" onclick="activarModoSeleccion('origen')" placeholder="Origen (Click mapa)..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all shadow-inner cursor-pointer" />
         </div>
 
-        <!-- Destino (Punto B) -->
         <div class="relative flex items-center">
           <div class="w-4 h-4 bg-orange-500 rounded-full border-2 border-white shadow-sm absolute left-4 z-10 flex items-center justify-center">
             <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
           </div>
-          <input type="text" id="destino-txt" onclick="activarModoSeleccion('destino')" placeholder="Destino (Ingresa texto o toca en mapa B)..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-xs font-black text-slate-900 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 transition-all shadow-inner" autocomplete="off" />
+          <input type="text" id="destino-txt" onclick="activarModoSeleccion('destino')" placeholder="Destino (Ingresa texto o toca en mapa)..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-xs font-black text-slate-900 focus:outline-none focus:border-orange-500 focus:bg-white transition-all shadow-inner" autocomplete="off" />
         </div>
-
-        <!-- Sugerencias -->
         <div id="sugerencias-destino" class="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-48 overflow-y-auto hidden divide-y divide-slate-100"></div>
       </div>
 
-      <!-- TARJETAS DE SERVICIOS -->
+      <!-- TARJETAS DE SERVICIOS CON TUS PNGs -->
       <div class="space-y-2 pt-1">
         <div class="flex items-center justify-between px-1">
           <label class="text-[11px] font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -115,11 +105,8 @@
         
         <div class="flex gap-3 overflow-x-auto no-scrollbar pb-2 pt-1" id="lista-servicios-pasajero">
           
-          <!-- 1. Envíos -->
-          <div onclick="seleccionarServicio('moto')" 
-               class="service-card cursor-pointer border-2 border-slate-200 bg-white p-3.5 rounded-3xl flex flex-col justify-between transition-all duration-300 active:scale-95 shadow-xs hover:border-slate-300 shrink-0 w-38 relative overflow-hidden group" 
-               data-service="moto">
-            <div class="absolute -right-4 -top-4 w-16 h-16 bg-amber-100/50 rounded-full group-hover:scale-125 transition-transform"></div>
+          <!-- Envíos -->
+          <div onclick="seleccionarServicio('moto')" class="service-card cursor-pointer border-2 border-slate-200 bg-white p-3.5 rounded-3xl flex flex-col justify-between shrink-0 w-38 relative overflow-hidden group" data-service="moto">
             <div>
               <div class="flex justify-between items-start mb-2">
                 <div class="w-12 h-12 bg-amber-50 rounded-2xl p-1.5 flex items-center justify-center shadow-sm border border-amber-100 group-hover:scale-110 transition-transform">
@@ -136,11 +123,8 @@
             </div>
           </div>
 
-          <!-- 2. Económico -->
-          <div onclick="seleccionarServicio('economico')" 
-               class="service-card card-selected cursor-pointer border-2 border-orange-500 p-3.5 rounded-3xl flex flex-col justify-between transition-all duration-300 active:scale-95 shrink-0 w-38 relative overflow-hidden ring-4 ring-orange-500/10" 
-               data-service="economico">
-            <div class="absolute -right-4 -top-4 w-16 h-16 bg-orange-500/10 rounded-full"></div>
+          <!-- Económico -->
+          <div onclick="seleccionarServicio('economico')" class="service-card card-selected cursor-pointer border-2 border-orange-500 p-3.5 rounded-3xl flex flex-col justify-between shrink-0 w-38 relative overflow-hidden ring-4 ring-orange-500/10" data-service="economico">
             <div>
               <div class="flex justify-between items-start mb-2">
                 <div class="w-12 h-12 bg-orange-50 rounded-2xl p-1.5 flex items-center justify-center shadow-sm border border-orange-100 group-hover:scale-110 transition-transform">
@@ -157,11 +141,8 @@
             </div>
           </div>
 
-          <!-- 3. Confort -->
-          <div onclick="seleccionarServicio('confort')" 
-               class="service-card cursor-pointer border-2 border-slate-200 bg-white p-3.5 rounded-3xl flex flex-col justify-between transition-all duration-300 active:scale-95 shadow-xs hover:border-slate-300 shrink-0 w-38 relative overflow-hidden group" 
-               data-service="confort">
-            <div class="absolute -right-4 -top-4 w-16 h-16 bg-emerald-50 rounded-full group-hover:scale-125 transition-transform"></div>
+          <!-- Confort -->
+          <div onclick="seleccionarServicio('confort')" class="service-card cursor-pointer border-2 border-slate-200 bg-white p-3.5 rounded-3xl flex flex-col justify-between shrink-0 w-38 relative overflow-hidden group" data-service="confort">
             <div>
               <div class="flex justify-between items-start mb-2">
                 <div class="w-12 h-12 bg-emerald-50 rounded-2xl p-1.5 flex items-center justify-center shadow-sm border border-emerald-100 group-hover:scale-110 transition-transform">
@@ -178,11 +159,8 @@
             </div>
           </div>
 
-          <!-- 4. Flete -->
-          <div onclick="seleccionarServicio('flete')" 
-               class="service-card cursor-pointer border-2 border-slate-200 bg-white p-3.5 rounded-3xl flex flex-col justify-between transition-all duration-300 active:scale-95 shadow-xs hover:border-slate-300 shrink-0 w-38 relative overflow-hidden group" 
-               data-service="flete">
-            <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-50 rounded-full group-hover:scale-125 transition-transform"></div>
+          <!-- Flete -->
+          <div onclick="seleccionarServicio('flete')" class="service-card cursor-pointer border-2 border-slate-200 bg-white p-3.5 rounded-3xl flex flex-col justify-between shrink-0 w-38 relative overflow-hidden group" data-service="flete">
             <div>
               <div class="flex justify-between items-start mb-2">
                 <div class="w-12 h-12 bg-blue-50 rounded-2xl p-1.5 flex items-center justify-center shadow-sm border border-blue-100 group-hover:scale-110 transition-transform">
@@ -199,11 +177,8 @@
             </div>
           </div>
 
-          <!-- 5. Grúa -->
-          <div onclick="seleccionarServicio('grua')" 
-               class="service-card cursor-pointer border-2 border-slate-200 bg-white p-3.5 rounded-3xl flex flex-col justify-between transition-all duration-300 active:scale-95 shadow-xs hover:border-slate-300 shrink-0 w-38 relative overflow-hidden group" 
-               data-service="grua">
-            <div class="absolute -right-4 -top-4 w-16 h-16 bg-red-50 rounded-full group-hover:scale-125 transition-transform"></div>
+          <!-- Grúa -->
+          <div onclick="seleccionarServicio('grua')" class="service-card cursor-pointer border-2 border-slate-200 bg-white p-3.5 rounded-3xl flex flex-col justify-between shrink-0 w-38 relative overflow-hidden group" data-service="grua">
             <div>
               <div class="flex justify-between items-start mb-2">
                 <div class="w-12 h-12 bg-red-50 rounded-2xl p-1.5 flex items-center justify-center shadow-sm border border-red-100 group-hover:scale-110 transition-transform">
@@ -223,13 +198,11 @@
         </div>
       </div>
 
-      <!-- Estatus del Viaje -->
       <div id="estado-viaje-box" class="hidden p-3.5 bg-orange-50 border border-orange-200 rounded-2xl text-center">
         <span class="text-[9px] text-orange-600 font-black uppercase tracking-widest block mb-0.5">Estado de la solicitud</span>
-        <span id="estado-viaje-texto" class="text-xs font-black text-orange-950">Buscando un conductor cercano...</span>
+        <span id="estado-viaje-texto" class="text-xs font-black text-orange-950">Buscando conductor...</span>
       </div>
 
-      <!-- Botón Principal -->
       <button id="btn-solicitar" disabled onclick="solicitarViaje()" class="w-full bg-slate-300 text-slate-500 cursor-not-allowed font-black py-4 rounded-2xl transition-all shadow-none text-xs tracking-wider uppercase active:scale-[0.98]">
         Ingresa tu destino 🚀
       </button>
@@ -240,36 +213,17 @@
   <script src="js/pasajero.js"></script>
   <script>
     window.servicioSeleccionado = 'economico';
-
     function seleccionarServicio(tipo) {
       window.servicioSeleccionado = tipo;
-      
       document.querySelectorAll('.service-card').forEach(card => {
         card.classList.remove('card-selected', 'border-orange-500', 'ring-4', 'ring-orange-500/10');
         card.classList.add('border-slate-200', 'bg-white');
-        
-        const priceElement = card.querySelector('.price-tag');
-        if (priceElement) {
-          priceElement.className = "text-xs font-black text-slate-900 price-tag";
-        }
       });
-
       const selectedCard = document.querySelector(`[data-service="${tipo}"]`);
       if (selectedCard) {
         selectedCard.classList.remove('border-slate-200', 'bg-white');
         selectedCard.classList.add('card-selected', 'ring-4', 'ring-orange-500/10');
-        
-        const priceElement = selectedCard.querySelector('.price-tag');
-        if (priceElement) {
-          priceElement.className = "text-xs font-black text-orange-600 price-tag";
-        }
       }
-    }
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(err => console.error('SW Error:', err));
-      });
     }
   </script>
 </body>
