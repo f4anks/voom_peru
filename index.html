@@ -23,9 +23,7 @@
     OneSignalDeferred.push(async function(OneSignal) {
       await OneSignal.init({
         appId: "98bfb199-5190-4c51-93b0-2cffb11c79e7",
-        notifyButton: {
-          enable: true,
-        },
+        notifyButton: { enable: true },
       });
     });
   </script>
@@ -40,31 +38,27 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
 
-  <!-- Adornos gráficos sutiles -->
+  <!-- Adornos gráficos -->
   <div class="absolute -top-24 -left-24 w-80 h-80 bg-orange-400/15 rounded-full blur-3xl pointer-events-none"></div>
   <div class="absolute -bottom-24 -right-24 w-80 h-80 bg-amber-400/15 rounded-full blur-3xl pointer-events-none"></div>
 
-  <!-- OVERLAY DE INSTALACIÓN PWA (Bloqueo Web) -->
+  <!-- OVERLAY DE INSTALACIÓN PWA -->
   <div id="pwa-install-overlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[9999] flex items-center justify-center p-6 text-center hidden">
     <div class="max-w-sm w-full bg-white border border-slate-200/80 p-8 rounded-3xl shadow-2xl relative overflow-hidden space-y-6">
-      
       <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-tr from-orange-500 to-amber-500 rounded-3xl text-white shadow-xl shadow-orange-500/30">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
         </svg>
       </div>
-
       <div>
         <h2 class="text-2xl font-black text-slate-900 tracking-tight">Instala Voom</h2>
         <p class="text-xs font-medium text-slate-500 mt-2 leading-relaxed">
           Para garantizar la máxima seguridad y mejor rendimiento, instala la aplicación en tu pantalla de inicio.
         </p>
       </div>
-
       <button id="btn-pwa-install" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-orange-500/30 text-sm tracking-wide active:scale-[0.98]">
         Instalar Aplicación Oficial 🚀
       </button>
-
       <div id="ios-instructions" class="hidden text-left bg-slate-50 p-4 rounded-2xl border border-slate-200 text-[11px] text-slate-600 space-y-1">
         <p class="font-bold text-orange-600">En iPhone / iOS:</p>
         <p>1. Toca el botón <strong>Compartir</strong> en Safari.</p>
@@ -123,7 +117,7 @@
       </button>
     </form>
 
-    <!-- Formulario Registro (Con DNI y Celular amarrado) -->
+    <!-- Formulario Registro -->
     <form id="form-register" class="space-y-4 hidden">
       <div>
         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nombre Completo</label>
@@ -160,7 +154,7 @@
       </div>
 
       <button type="submit" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-orange-500/25 text-sm tracking-wide active:scale-[0.98]">
-        Crear Cuenta
+        Crear Cuenta y Registrar
       </button>
     </form>
 
@@ -174,7 +168,7 @@
     const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Control de Pestañas (Login / Registro)
+    // Control de Tabs
     const btnTabLogin = document.getElementById('btn-tab-login');
     const btnTabRegister = document.getElementById('btn-tab-register');
     const formLogin = document.getElementById('form-login');
@@ -197,7 +191,7 @@
       statusMsg.classList.add('hidden');
     });
 
-    // Manejar Login
+    // Manejo de Inicio de Sesión
     formLogin.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('login-email').value;
@@ -215,7 +209,7 @@
       }
     });
 
-    // Manejar Registro + Asociación de Teléfono + Push de Bienvenida
+    // Registro + Celular Amarrado + Notificación Push Directa
     formRegister.addEventListener('submit', async (e) => {
       e.preventDefault();
       const nombre = document.getElementById('reg-name').value;
@@ -224,15 +218,14 @@
       const email = document.getElementById('reg-email').value;
       const password = document.getElementById('reg-password').value;
 
-      // Validación simple de número de celular peruano (9 dígitos empezando con 9)
       if (!/^9[0-9]{8}$/.test(telefono)) {
-        mostrarMensaje("Por favor ingresa un número de celular válido de Perú (9 dígitos)", "error");
+        mostrarMensaje("El celular debe ser válido de Perú (9 dígitos)", "error");
         return;
       }
 
       mostrarMensaje("Creando cuenta en Voom...", "info");
 
-      // 1. Registro en Supabase Auth amarrando el teléfono y DNI en metadatos y perfiles
+      // 1. Alta en Supabase (guarda el teléfono en metadata y perfiles)
       const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
@@ -250,9 +243,9 @@
         return;
       }
 
-      mostrarMensaje("¡Cuenta creada y número vinculado con éxito! Enviando bienvenida...", "success");
+      mostrarMensaje("¡Registro completado! Enviando push de bienvenida...", "success");
 
-      // 2. Disparar notificación push individualizada de bienvenida mediante OneSignal y Edge Function
+      // 2. Disparo de Notificación Push mediante Edge Function y OneSignal
       try {
         let subscriptionId = null;
         if (typeof OneSignal !== 'undefined' && OneSignal.User && OneSignal.User.PushSubscription) {
@@ -266,15 +259,14 @@
           },
           body: JSON.stringify({
             titulo: "¡Bienvenido a Voom Perú! 🚗",
-            mensaje: `Hola ${nombre}, tu cuenta y celular han sido registrados correctamente. ¡Disfruta de tus viajes!`,
+            mensaje: `Hola ${nombre}, tu cuenta asociada al celular ${telefono} ha sido registrada correctamente.`,
             subscription_id: subscriptionId 
           })
         });
       } catch (pushErr) {
-        console.warn("No se pudo disparar el push automático de bienvenida:", pushErr);
+        console.warn("Error al enviar notificación push de bienvenida:", pushErr);
       }
 
-      // Redirigir al selector de modo después de 1.5 segundos
       setTimeout(() => {
         window.location.href = 'selector.html';
       }, 1500);
@@ -293,7 +285,6 @@
       }
     }
 
-    // Función para alternar visibilidad de contraseña
     function togglePassword(idInput, idIcon) {
       const input = document.getElementById(idInput);
       const icon = document.getElementById(idIcon);
