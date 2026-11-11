@@ -123,7 +123,7 @@
       </button>
     </form>
 
-    <!-- Formulario Registro (Con DNI y Celular de Perú) -->
+    <!-- Formulario Registro -->
     <form id="form-register" class="space-y-4 hidden">
       <div>
         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nombre Completo</label>
@@ -168,8 +168,121 @@
 
   </div>
 
-  <script src="./js/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    const SUPABASE_URL = 'https://gklquvthucityzgcamao.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Control de Pestañas (Login / Registro)
+    const btnTabLogin = document.getElementById('btn-tab-login');
+    const btnTabRegister = document.getElementById('btn-tab-register');
+    const formLogin = document.getElementById('form-login');
+    const formRegister = document.getElementById('form-register');
+    const statusMsg = document.getElementById('status-message');
+
+    btnTabLogin.addEventListener('click', () => {
+      btnTabLogin.className = "flex-1 py-2.5 text-xs font-bold rounded-xl bg-white text-orange-600 shadow-sm transition-all duration-200";
+      btnTabRegister.className = "flex-1 py-2.5 text-xs font-bold rounded-xl text-slate-500 hover:text-slate-800 transition-all duration-200";
+      formLogin.classList.remove('hidden');
+      formRegister.classList.add('hidden');
+      statusMsg.classList.add('hidden');
+    });
+
+    btnTabRegister.addEventListener('click', () => {
+      btnTabRegister.className = "flex-1 py-2.5 text-xs font-bold rounded-xl bg-white text-orange-600 shadow-sm transition-all duration-200";
+      btnTabLogin.className = "flex-1 py-2.5 text-xs font-bold rounded-xl text-slate-500 hover:text-slate-800 transition-all duration-200";
+      formRegister.classList.remove('hidden');
+      formLogin.classList.add('hidden');
+      statusMsg.classList.add('hidden');
+    });
+
+    // Manejar Login
+    formLogin.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+
+      mostrarMensaje("Iniciando sesión...", "info");
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        mostrarMensaje(error.message, "error");
+      } else {
+        mostrarMensaje("¡Sesión iniciada! Redirigiendo...", "success");
+        setTimeout(() => window.location.href = 'selector.html', 1000);
+      }
+    });
+
+    // Manejar Registro + Disparo de Push de Bienvenida Automática
+    formRegister.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('reg-name').value;
+      const dni = document.getElementById('reg-dni').value;
+      const telefono = document.getElementById('reg-telefono').value;
+      const email = document.getElementById('reg-email').value;
+      const password = document.getElementById('reg-password').value;
+
+      mostrarMensaje("Creando cuenta en Voom...", "info");
+
+      // 1. Registro en Supabase Auth
+      const { data, error } = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: nombre, dni: dni, telefono: telefono }
+        }
+      });
+
+      if (error) {
+        mostrarMensaje(error.message, "error");
+        return;
+      }
+
+      mostrarMensaje("¡Cuenta creada con éxito! Enviando notificación de bienvenida...", "success");
+
+      // 2. Disparar notificación push individualizada de bienvenida mediante OneSignal y Edge Function
+      try {
+        let subscriptionId = null;
+        if (typeof OneSignal !== 'undefined' && OneSignal.User && OneSignal.User.PushSubscription) {
+          subscriptionId = OneSignal.User.PushSubscription.id;
+        }
+
+        await fetch('https://gklquvthucityzgcamao.supabase.co/functions/v1/enviar-push', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            titulo: "¡Bienvenido a Voom Perú! 🚗",
+            mensaje: `Hola ${nombre}, tu cuenta ha sido registrada correctamente. ¡Disfruta de tus viajes!`,
+            subscription_id: subscriptionId // Envía el push directamente a este dispositivo registrado
+          })
+        });
+      } catch (pushErr) {
+        console.warn("No se pudo disparar el push automático de bienvenida:", pushErr);
+      }
+
+      // Redirigir al selector de modo después de 1.5 segundos
+      setTimeout(() => {
+        window.location.href = 'selector.html';
+      }, 1500);
+    });
+
+    function mostrarMensaje(texto, tipo) {
+      statusMsg.textContent = texto;
+      statusMsg.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'border-red-200', 'bg-emerald-50', 'text-emerald-600', 'border-emerald-200', 'bg-slate-50', 'text-slate-600', 'border-slate-200');
+      
+      if (tipo === 'error') {
+        statusMsg.classList.add('bg-red-50', 'text-red-600', 'border-red-200');
+      } else if (tipo === 'success') {
+        statusMsg.classList.add('bg-emerald-50', 'text-emerald-600', 'border-emerald-200');
+      } else {
+        statusMsg.classList.add('bg-slate-50', 'text-slate-600', 'border-slate-200');
+      }
+    }
+
     // Función para alternar visibilidad de contraseña
     function togglePassword(idInput, idIcon) {
       const input = document.getElementById(idInput);
@@ -186,7 +299,6 @@
     }
 
     let deferredPrompt = null;
-
     const overlay = document.getElementById('pwa-install-overlay');
     const appContent = document.getElementById('app-content');
     const btnInstall = document.getElementById('btn-pwa-install');
@@ -210,13 +322,11 @@
 
     window.addEventListener('DOMContentLoaded', checkPWAState);
 
-    // Capturar el evento de instalación nativo
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
     });
 
-    // Acción del botón de instalación dentro del modal de acceso restringido
     document.addEventListener('click', async (e) => {
       const target = e.target.closest('#btn-pwa-install, #btn-pwa-install-forced');
       if (!target) return;
@@ -245,7 +355,7 @@
         msgBox.className = 'mt-3 p-3 bg-orange-50 border border-orange-200 rounded-2xl text-[11px] font-bold text-orange-800 text-center';
         target.insertAdjacentElement('afterend', msgBox);
       }
-      msgBox.innerHTML = "💡 Para instalar en PC, haz clic en el icono de instalación (ordenador con una flecha) ubicado al lado de la estrella en la barra de direcciones de arriba.";
+      msgBox.innerHTML = "💡 Para instalar en PC, haz clic en el icono de instalación ubicado al lado de la barra de direcciones.";
     });
 
     if ('serviceWorker' in navigator) {
@@ -254,7 +364,6 @@
       });
     }
 
-    // Protecciones de interfaz
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.addEventListener('keydown', e => {
       if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || (e.ctrlKey && e.key === 'U')) {
