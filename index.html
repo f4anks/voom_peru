@@ -123,7 +123,7 @@
       </button>
     </form>
 
-    <!-- Formulario Registro -->
+    <!-- Formulario Registro (Con DNI y Celular amarrado) -->
     <form id="form-register" class="space-y-4 hidden">
       <div>
         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nombre Completo</label>
@@ -215,7 +215,7 @@
       }
     });
 
-    // Manejar Registro + Disparo de Push de Bienvenida Automática
+    // Manejar Registro + Asociación de Teléfono + Push de Bienvenida
     formRegister.addEventListener('submit', async (e) => {
       e.preventDefault();
       const nombre = document.getElementById('reg-name').value;
@@ -224,14 +224,24 @@
       const email = document.getElementById('reg-email').value;
       const password = document.getElementById('reg-password').value;
 
+      // Validación simple de número de celular peruano (9 dígitos empezando con 9)
+      if (!/^9[0-9]{8}$/.test(telefono)) {
+        mostrarMensaje("Por favor ingresa un número de celular válido de Perú (9 dígitos)", "error");
+        return;
+      }
+
       mostrarMensaje("Creando cuenta en Voom...", "info");
 
-      // 1. Registro en Supabase Auth
+      // 1. Registro en Supabase Auth amarrando el teléfono y DNI en metadatos y perfiles
       const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name: nombre, dni: dni, telefono: telefono }
+          data: { 
+            full_name: nombre, 
+            dni: dni, 
+            telefono: telefono 
+          }
         }
       });
 
@@ -240,7 +250,7 @@
         return;
       }
 
-      mostrarMensaje("¡Cuenta creada con éxito! Enviando notificación de bienvenida...", "success");
+      mostrarMensaje("¡Cuenta creada y número vinculado con éxito! Enviando bienvenida...", "success");
 
       // 2. Disparar notificación push individualizada de bienvenida mediante OneSignal y Edge Function
       try {
@@ -256,8 +266,8 @@
           },
           body: JSON.stringify({
             titulo: "¡Bienvenido a Voom Perú! 🚗",
-            mensaje: `Hola ${nombre}, tu cuenta ha sido registrada correctamente. ¡Disfruta de tus viajes!`,
-            subscription_id: subscriptionId // Envía el push directamente a este dispositivo registrado
+            mensaje: `Hola ${nombre}, tu cuenta y celular han sido registrados correctamente. ¡Disfruta de tus viajes!`,
+            subscription_id: subscriptionId 
           })
         });
       } catch (pushErr) {
