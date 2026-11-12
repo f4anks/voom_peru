@@ -182,23 +182,34 @@ function checkPWAState() {
   }
 }
 
+// Captura oficial del evento de instalación nativo de Chrome / Android
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
+  console.log('✅ Evento beforeinstallprompt capturado y listo para usar.');
 });
 
+// Acción del botón de instalación con respaldo de seguridad
 document.addEventListener('click', async (e) => {
   const target = e.target.closest('#btn-pwa-install');
   if (!target) return;
 
   if (deferredPrompt) {
+    // Lanzamos el instalador nativo de Android
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
+    
     if (outcome === 'accepted') {
+      console.log('Usuario aceptó instalar la PWA');
       if (overlay) overlay.classList.add('hidden');
       if (appContent) appContent.classList.remove('hidden');
+    } else {
+      console.log('Usuario canceló la instalación');
     }
     deferredPrompt = null;
+  } else {
+    // Si el navegador de Android aún no expone el prompt, guiamos al usuario limpiamente
+    alert("Para instalar Voom en tu dispositivo, toca los tres puntos (⋮) en la esquina superior derecha de tu navegador y selecciona 'Instalar aplicación' o 'Agregar a la pantalla principal'.");
   }
 });
 
