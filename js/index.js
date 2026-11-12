@@ -16,10 +16,18 @@ const formLogin = document.getElementById('form-login');
 const formRegister = document.getElementById('form-register');
 const statusMsg = document.getElementById('status-message');
 
-// Arranque al cargar el DOM (Validación estricta contra el servidor real de Supabase)
+// Arranque al cargar el DOM (Restringido estrictamente a PWA instalada)
 window.addEventListener('DOMContentLoaded', () => {
+  // 1. Verificamos el estado de la PWA primero
   checkPWAState();
+
+  // 2. Si NO está instalada como PWA, detenemos la ejecución para que no valide sesión ni permita operar en web
+  if (!isRunningStandalone()) {
+    console.warn("Acceso bloqueado: La aplicación debe instalarse como PWA para ser utilizada.");
+    return;
+  }
   
+  // 3. Si SÍ es una PWA instalada, procedemos con la validación estricta contra el servidor real de Supabase
   supabaseClient.auth.getUser().then(async ({ data: { user }, error }) => {
     if (user && !error) {
       mostrarMensaje("Sesión activa verificada. Redirigiendo...", "success");
