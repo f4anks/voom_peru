@@ -1,4 +1,4 @@
-const CACHE_NAME = 'voom-cache-v6.1'; // <--- Incrementado a v6
+const CACHE_NAME = 'voom-cache-v6.1';
 const urlsToCache = [
   './',
   './index.html',
@@ -18,11 +18,19 @@ const urlsToCache = [
   './icons/icon-512.png'
 ];
 
-// Instalación y activación inmediata
+// Instalación robusta (No se rompe si algún archivo secundario falla o da 404)
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then(cache => {
+      return Promise.all(
+        urlsToCache.map(url => {
+          return cache.add(url).catch(err => {
+            console.warn('No se pudo cachear de forma opcional:', url, err);
+          });
+        })
+      );
+    })
   );
 });
 
@@ -33,7 +41,7 @@ self.addEventListener('activate', event => {
         cacheNames.map(cache => {
           if (cache !== CACHE_NAME) {
             console.log('Eliminando caché antiguo:', cache);
-            return caches.delete(cache); // Elimina cachés de versiones anteriores (v1, v2, v3, v4, v5)
+            return caches.delete(cache); // Elimina cachés de versiones anteriores
           }
         })
       );
