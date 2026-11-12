@@ -1,199 +1,215 @@
+// 1. Configuración e Inicialización de Supabase
 const SUPABASE_URL = 'https://gklquvthucityzgcamao.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-document.addEventListener('DOMContentLoaded', async () => {
-  // 1. VALIDACIÓN DE SEGURIDAD: Bloquear si se ejecuta en navegador web normal
-  if (!verificarModoStandalone()) {
-    bloquearAccesoWeb();
-    return;
-  }
+// Variables globales para la PWA
+let deferredPrompt = null;
+const overlay = document.getElementById('pwa-install-overlay');
+const appContent = document.getElementById('app-content');
+const iosBanner = document.getElementById('ios-installer-banner');
 
-  // 2. SESIÓN PERSISTENTE: Si ya hay una sesión activa, entrar directo al selector
-  try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (session && session.user) {
-      redirigirAlSelector();
-      return;
+// Elementos del DOM de la interfaz
+const btnTabLogin = document.getElementById('btn-tab-login');
+const btnTabRegister = document.getElementById('btn-tab-register');
+const formLogin = document.getElementById('form-login');
+const formRegister = document.getElementById('form-register');
+const statusMsg = document.getElementById('status-message');
+
+// 2. Arranque al cargar el DOM (Verificación de sesión no bloqueante)
+window.addEventListener('DOMContentLoaded', () => {
+  checkPWAState();
+  
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      mostrarMensaje("Sesión activa detectada. Redirigiendo...", "success");
+      window.location.href = 'selector.html';
     }
-  } catch (err) {
-    console.error("Error al verificar sesión guardada:", err);
-  }
-
-  const btnTabLogin = document.getElementById('btn-tab-login');
-  const btnTabRegister = document.getElementById('btn-tab-register');
-  const formLogin = document.getElementById('form-login');
-  const formRegister = document.getElementById('form-register');
-  const statusMsg = document.getElementById('status-message');
-
-  // Alternar entre pestañas de Login y Registro
-  if (btnTabLogin && btnTabRegister) {
-    btnTabLogin.addEventListener('click', () => {
-      formLogin.classList.remove('hidden');
-      formRegister.classList.add('hidden');
-      btnTabLogin.className = "flex-1 py-2.5 text-xs font-bold rounded-xl bg-white text-orange-600 shadow-sm transition-all duration-200";
-      btnTabRegister.className = "flex-1 py-2.5 text-xs font-bold rounded-xl text-slate-500 hover:text-slate-800 transition-all duration-200";
-    });
-
-    btnTabRegister.addEventListener('click', () => {
-      formRegister.classList.remove('hidden');
-      formLogin.classList.add('hidden');
-      btnTabRegister.className = "flex-1 py-2.5 text-xs font-bold rounded-xl bg-white text-orange-600 shadow-sm transition-all duration-200";
-      btnTabLogin.className = "flex-1 py-2.5 text-xs font-bold rounded-xl text-slate-500 hover:text-slate-800 transition-all duration-200";
-    });
-  }
-
-  // Manejo de Iniciar Sesión
-  if (formLogin) {
-    formLogin.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('login-email').value;
-      const password = document.getElementById('login-password').value;
-
-      mostrarMensaje("Iniciando sesión...", "info");
-
-      try {
-        const { data, error } = await supabaseClient.auth.signInWithPassword({
-          email: email,
-          password: password
-        });
-
-        if (error) throw error;
-
-        const nombreUsuario = data.user.user_metadata?.full_name || email.split('@')[0];
-        localStorage.setItem('voom_user_name', nombreUsuario);
-
-        mostrarMensaje("¡Bienvenido a Voom!", "éxito");
-
-        setTimeout(() => {
-          redirigirAlSelector();
-        }, 1000);
-
-      } catch (err) {
-        mostrarMensaje(err.message || "Error al iniciar sesión", "error");
-      }
-    });
-  }
-
-  // Manejo de Registro (Con validación de DNI y Celular de Perú)
-  if (formRegister) {
-    formRegister.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const name = document.getElementById('reg-name').value.trim();
-      const dni = document.getElementById('reg-dni').value.trim();
-      const telefono = document.getElementById('reg-telefono').value.trim();
-      const email = document.getElementById('reg-email').value.trim();
-      const password = document.getElementById('reg-password').value;
-
-      // Validaciones de formato peruano
-      if (dni.length !== 8 || isNaN(dni)) {
-        mostrarMensaje("El DNI debe tener exactamente 8 dígitos numéricos.", "error");
-        return;
-      }
-
-      if (!telefono.startsWith('9') || telefono.length !== 9 || isNaN(telefono)) {
-        mostrarMensaje("El celular debe comenzar con 9 y tener 9 dígitos.", "error");
-        return;
-      }
-
-      mostrarMensaje("Creando tu cuenta...", "info");
-
-      try {
-        const { data, error } = await supabaseClient.auth.signUp({
-          email: email,
-          password: password,
-          options: {
-            data: { 
-              full_name: name, 
-              dni: dni,
-              telefono: telefono,
-              role: 'pasajero' // Rol base unificado para nuevos registros
-            }
-          }
-        });
-
-        if (error) throw error;
-
-        localStorage.setItem('voom_user_name', name);
-        mostrarMensaje("Cuenta creada exitosamente.", "éxito");
-
-        setTimeout(() => {
-          redirigirAlSelector();
-        }, 1000);
-
-      } catch (err) {
-        mostrarMensaje(err.message || "Error al crear la cuenta", "error");
-      }
-    });
-  }
-
-  function mostrarMensaje(texto, tipo) {
-    if (!statusMsg) return;
-    statusMsg.textContent = texto;
-    statusMsg.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'border-red-200', 'bg-emerald-50', 'text-emerald-600', 'border-emerald-200', 'bg-slate-50', 'text-slate-600', 'border-slate-200');
-
-    if (tipo === 'error') {
-      statusMsg.classList.add('bg-red-50', 'text-red-600', 'border-red-200');
-    } else if (tipo === 'éxito') {
-      statusMsg.classList.add('bg-emerald-50', 'text-emerald-600', 'border-emerald-200');
-    } else {
-      statusMsg.classList.add('bg-slate-50', 'text-slate-600', 'border-slate-200');
-    }
-  }
+  }).catch(err => {
+    console.warn("Verificación de sesión omitida en modo local:", err);
+  });
 });
 
-function redirigirAlSelector() {
-  window.location.href = 'selector.html';
+// 3. Control de Pestañas (Login / Registro)
+if (btnTabLogin && btnTabRegister) {
+  btnTabLogin.addEventListener('click', () => {
+    btnTabLogin.className = "flex-1 py-2.5 text-xs font-bold rounded-xl bg-white text-orange-600 shadow-sm transition-all duration-200";
+    btnTabRegister.className = "flex-1 py-2.5 text-xs font-bold rounded-xl text-slate-500 hover:text-slate-800 transition-all duration-200";
+    formLogin.classList.remove('hidden');
+    formRegister.classList.add('hidden');
+    statusMsg.classList.add('hidden');
+  });
+
+  btnTabRegister.addEventListener('click', () => {
+    btnTabRegister.className = "flex-1 py-2.5 text-xs font-bold rounded-xl bg-white text-orange-600 shadow-sm transition-all duration-200";
+    btnTabLogin.className = "flex-1 py-2.5 text-xs font-bold rounded-xl text-slate-500 hover:text-slate-800 transition-all duration-200";
+    formRegister.classList.remove('hidden');
+    formLogin.classList.add('hidden');
+    statusMsg.classList.add('hidden');
+  });
 }
 
-function verificarModoStandalone() {
+// 4. Procesamiento del Formulario de Login
+if (formLogin) {
+  formLogin.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+
+    mostrarMensaje("Iniciando sesión...", "info");
+
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    
+    if (error) {
+      mostrarMensaje(error.message, "error");
+    } else {
+      mostrarMensaje("¡Sesión iniciada! Redirigiendo...", "success");
+      setTimeout(() => window.location.href = 'selector.html', 800);
+    }
+  });
+}
+
+// 5. Procesamiento del Formulario de Registro + Push
+if (formRegister) {
+  formRegister.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nombre = document.getElementById('reg-name').value;
+    const dni = document.getElementById('reg-dni').value;
+    const telefono = document.getElementById('reg-telefono').value;
+    const email = document.getElementById('reg-email').value;
+    const password = document.getElementById('reg-password').value;
+
+    if (!/^9[0-9]{8}$/.test(telefono)) {
+      mostrarMensaje("El celular debe ser válido de Perú (9 dígitos)", "error");
+      return;
+    }
+
+    mostrarMensaje("Creando cuenta en Voom...", "info");
+
+    const { data, error } = await supabaseClient.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: nombre, dni: dni, telefono: telefono }
+      }
+    });
+
+    if (error) {
+      mostrarMensaje(error.message, "error");
+      return;
+    }
+
+    mostrarMensaje("¡Registro completado! Enviando push de bienvenida...", "success");
+
+    try {
+      let subscriptionId = null;
+      if (typeof OneSignal !== 'undefined' && OneSignal.User && OneSignal.User.PushSubscription) {
+        subscriptionId = OneSignal.User.PushSubscription.id;
+      }
+
+      await fetch('https://gklquvthucityzgcamao.supabase.co/functions/v1/enviar-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titulo: "¡Bienvenido a Voom Perú! 🚗",
+          mensaje: `Hola ${nombre}, tu cuenta asociada al celular ${telefono} ha sido registrada correctamente.`,
+          subscription_id: subscriptionId 
+        })
+      });
+    } catch (pushErr) {
+      console.warn("Error al enviar notificación push de bienvenida:", pushErr);
+    }
+
+    setTimeout(() => {
+      window.location.href = 'selector.html';
+    }, 1500);
+  });
+}
+
+// 6. Funciones de Soporte e Interfaz
+function mostrarMensaje(texto, tipo) {
+  if (!statusMsg) return;
+  statusMsg.textContent = texto;
+  statusMsg.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'border-red-200', 'bg-emerald-50', 'text-emerald-600', 'border-emerald-200', 'bg-slate-50', 'text-slate-600', 'border-slate-200');
+  
+  if (tipo === 'error') {
+    statusMsg.classList.add('bg-red-50', 'text-red-600', 'border-red-200');
+  } else if (tipo === 'success') {
+    statusMsg.classList.add('bg-emerald-50', 'text-emerald-600', 'border-emerald-200');
+  } else {
+    statusMsg.classList.add('bg-slate-50', 'text-slate-600', 'border-slate-200');
+  }
+}
+
+function togglePassword(idInput, idIcon) {
+  const input = document.getElementById(idInput);
+  const icon = document.getElementById(idIcon);
+  if (!input || !icon) return;
+
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.05 10.05 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18"/>`;
+  } else {
+    input.type = 'password';
+    icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />`;
+  }
+}
+
+// 7. Lógica del Instalador PWA
+function isRunningStandalone() {
   return (window.matchMedia('(display-mode: standalone)').matches) || 
          (window.navigator.standalone === true) || 
          document.referrer.includes('android-app://');
 }
 
-function bloquearAccesoWeb() {
-  const appContent = document.getElementById('app-content');
-  const installOverlay = document.getElementById('pwa-install-overlay');
+function checkPWAState() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-  if (appContent) appContent.classList.add('hidden');
-
-  if (installOverlay) {
-    installOverlay.classList.remove('hidden');
-
-    const cajaModal = installOverlay.querySelector('.max-w-sm');
-    if (cajaModal) {
-      cajaModal.innerHTML = `
-        <div class="inline-flex items-center justify-center w-20 h-20 bg-red-500 rounded-3xl text-white shadow-xl shadow-red-500/30">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-          </svg>
-        </div>
-        <div>
-          <h2 class="text-2xl font-black text-slate-900 tracking-tight">Acceso Restringido</h2>
-          <p class="text-xs font-medium text-slate-500 mt-2 leading-relaxed">
-            Por seguridad, <strong>Voom</strong> no puede utilizarse desde el navegador web. Debes instalar y abrir la aplicación desde tu pantalla de inicio.
-          </p>
-        </div>
-        <button id="btn-pwa-install-forced" class="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-orange-500/30 text-sm tracking-wide">
-          Instalar Aplicación Ahora 🚀
-        </button>
-      `;
-
-      setTimeout(() => {
-        const btnForced = document.getElementById('btn-pwa-install-forced');
-        if (btnForced) {
-          btnForced.addEventListener('click', async () => {
-            if (window.deferredPrompt) {
-              window.deferredPrompt.prompt();
-              await window.deferredPrompt.userChoice;
-              window.deferredPrompt = null;
-            } else {
-              alert("Toca los tres puntos (⋮) de Chrome y selecciona 'Agregar a la pantalla principal' o 'Instalar aplicación'.");
-            }
-          });
-        }
-      }, 100);
+  if (isRunningStandalone()) {
+    if (overlay) overlay.classList.add('hidden');
+    if (iosBanner) iosBanner.classList.add('hidden');
+    if (appContent) appContent.classList.remove('hidden');
+  } else {
+    if (isIOS) {
+      if (overlay) overlay.classList.add('hidden');
+      if (iosBanner) iosBanner.classList.remove('hidden');
+    } else {
+      if (overlay) overlay.classList.remove('hidden');
+      if (iosBanner) iosBanner.classList.add('hidden');
     }
   }
 }
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+});
+
+document.addEventListener('click', async (e) => {
+  const target = e.target.closest('#btn-pwa-install');
+  if (!target) return;
+
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      if (overlay) overlay.classList.add('hidden');
+      if (appContent) appContent.classList.remove('hidden');
+    }
+    deferredPrompt = null;
+  }
+});
+
+// 8. Registro del Service Worker y Seguridad del Cliente
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(err => console.error('SW Error:', err));
+  });
+}
+
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || (e.ctrlKey && e.key === 'U')) {
+    e.preventDefault();
+  }
+});
