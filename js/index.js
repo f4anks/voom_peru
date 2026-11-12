@@ -1,4 +1,4 @@
-// 1. Configuración e Inicialización de Supabase
+// Configuración e Inicialización de Supabase
 const SUPABASE_URL = 'https://gklquvthucityzgcamao.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -9,14 +9,14 @@ const overlay = document.getElementById('pwa-install-overlay');
 const appContent = document.getElementById('app-content');
 const iosBanner = document.getElementById('ios-installer-banner');
 
-// Elementos del DOM de la interfaz
+// Elementos del DOM
 const btnTabLogin = document.getElementById('btn-tab-login');
 const btnTabRegister = document.getElementById('btn-tab-register');
 const formLogin = document.getElementById('form-login');
 const formRegister = document.getElementById('form-register');
 const statusMsg = document.getElementById('status-message');
 
-// 2. Arranque al cargar el DOM (Verificación de sesión no bloqueante)
+// Arranque al cargar el DOM (Verificación de sesión no bloqueante para liberar el prompt en Android)
 window.addEventListener('DOMContentLoaded', () => {
   checkPWAState();
   
@@ -30,7 +30,7 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// 3. Control de Pestañas (Login / Registro)
+// Control de Tabs (Login / Registro)
 if (btnTabLogin && btnTabRegister) {
   btnTabLogin.addEventListener('click', () => {
     btnTabLogin.className = "flex-1 py-2.5 text-xs font-bold rounded-xl bg-white text-orange-600 shadow-sm transition-all duration-200";
@@ -49,7 +49,7 @@ if (btnTabLogin && btnTabRegister) {
   });
 }
 
-// 4. Procesamiento del Formulario de Login
+// Manejo de Inicio de Sesión
 if (formLogin) {
   formLogin.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -69,7 +69,7 @@ if (formLogin) {
   });
 }
 
-// 5. Procesamiento del Formulario de Registro + Push
+// Registro + DNI + Celular Amarrado + Notificación Push Directa
 if (formRegister) {
   formRegister.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -86,6 +86,7 @@ if (formRegister) {
 
     mostrarMensaje("Creando cuenta en Voom...", "info");
 
+    // 1. Alta en Supabase con metadatos
     const { data, error } = await supabaseClient.auth.signUp({
       email,
       password,
@@ -101,6 +102,7 @@ if (formRegister) {
 
     mostrarMensaje("¡Registro completado! Enviando push de bienvenida...", "success");
 
+    // 2. Disparo de Notificación Push mediante Edge Function
     try {
       let subscriptionId = null;
       if (typeof OneSignal !== 'undefined' && OneSignal.User && OneSignal.User.PushSubscription) {
@@ -126,7 +128,7 @@ if (formRegister) {
   });
 }
 
-// 6. Funciones de Soporte e Interfaz
+// Funciones de Soporte e Interfaz
 function mostrarMensaje(texto, tipo) {
   if (!statusMsg) return;
   statusMsg.textContent = texto;
@@ -155,7 +157,7 @@ function togglePassword(idInput, idIcon) {
   }
 }
 
-// 7. Lógica del Instalador PWA
+// Manejo inteligente de PWA para Android vs iOS
 function isRunningStandalone() {
   return (window.matchMedia('(display-mode: standalone)').matches) || 
          (window.navigator.standalone === true) || 
@@ -200,7 +202,7 @@ document.addEventListener('click', async (e) => {
   }
 });
 
-// 8. Registro del Service Worker y Seguridad del Cliente
+// Registro del Service Worker y Seguridad
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(err => console.error('SW Error:', err));
