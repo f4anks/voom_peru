@@ -1,4 +1,4 @@
-const CACHE_NAME = 'voom-cache-v6'; // <--- Incrementado a v6
+const CACHE_NAME = 'voom-cache-v6.1'; // <--- Incrementado a v6
 const urlsToCache = [
   './',
   './index.html',
