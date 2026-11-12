@@ -207,7 +207,6 @@ document.addEventListener('click', async (e) => {
   if (!target) return;
 
   if (deferredPrompt) {
-    // Lanzamos el instalador nativo de Android
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     
@@ -220,7 +219,6 @@ document.addEventListener('click', async (e) => {
     }
     deferredPrompt = null;
   } else {
-    // Si el navegador de Android aún no expone el prompt, guiamos al usuario limpiamente
     alert("Para instalar Voom en tu dispositivo, toca los tres puntos (⋮) en la esquina superior derecha de tu navegador y selecciona 'Instalar aplicación' o 'Agregar a la pantalla principal'.");
   }
 });
