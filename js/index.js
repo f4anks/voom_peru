@@ -16,17 +16,21 @@ const formLogin = document.getElementById('form-login');
 const formRegister = document.getElementById('form-register');
 const statusMsg = document.getElementById('status-message');
 
-// Arranque al cargar el DOM (Verificación de sesión no bloqueante para liberar el prompt en Android)
+// Arranque al cargar el DOM (Validación estricta contra el servidor real de Supabase)
 window.addEventListener('DOMContentLoaded', () => {
   checkPWAState();
   
-  supabaseClient.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-      mostrarMensaje("Sesión activa detectada. Redirigiendo...", "success");
+  supabaseClient.auth.getUser().then(async ({ data: { user }, error }) => {
+    if (user && !error) {
+      mostrarMensaje("Sesión activa verificada. Redirigiendo...", "success");
       window.location.href = 'selector.html';
+    } else {
+      // Si el usuario fue eliminado en Supabase o el token expiró, limpiamos el caché local
+      await supabaseClient.auth.signOut();
     }
-  }).catch(err => {
-    console.warn("Verificación de sesión omitida en modo local:", err);
+  }).catch(async (err) => {
+    console.warn("Sin conexión o sesión inválida:", err);
+    await supabaseClient.auth.signOut();
   });
 });
 
