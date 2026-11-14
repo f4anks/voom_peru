@@ -97,7 +97,7 @@
     </div>
 
     <!-- TARJETA DE REFERIDOS Y CUPONES -->
-    <div class="p-4 bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-2xl space-y-2.5">
+    <div class="p-4 bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-2xl space-y-3">
       <div class="flex items-center justify-between">
         <span class="text-xs font-black text-orange-900 uppercase tracking-wider flex items-center gap-1.5">
           <span>🎁</span> Invita y Gana
@@ -107,8 +107,17 @@
         </span>
       </div>
       <p class="text-[11px] text-orange-800 font-medium leading-relaxed">
-        Comparte tu enlace. Cuando tu invitado complete su primer viaje, ambos ganan un <strong>10% de descuento</strong>.
+        Comparte tu código o enlace. Cuando tu invitado complete su primer viaje, ganas un <strong>10% de descuento</strong> en tu próximo viaje.
       </p>
+
+      <!-- CAJA PARA MOSTRAR Y COPIAR EL CÓDIGO -->
+      <div class="flex items-center gap-2 bg-white p-2 rounded-xl border border-orange-200 shadow-inner">
+        <input type="text" id="input-codigo-ref" readonly value="Cargando..." class="w-full bg-transparent text-xs font-black text-slate-800 text-center uppercase tracking-widest focus:outline-none" />
+        <button onclick="copiarCodigoRef()" id="btn-copiar-ref" class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-[11px] font-bold rounded-lg transition-colors shadow-xs shrink-0">
+          Copiar
+        </button>
+      </div>
+
       <button onclick="compartirPorWhatsApp()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center gap-2">
         <span>💬</span> Compartir mi enlace por WhatsApp
       </button>
@@ -191,12 +200,17 @@
           .maybeSingle();
 
         if (perfil) {
-          codigoReferidoUsuario = perfil.codigo_referido || '';
+          codigoReferidoUsuario = perfil.codigo_referido || ('VOOM-' + user.id.substring(0, 6).toUpperCase());
           cuponesUsuario = perfil.cupones_10_pct || 0;
           
           const badgeCupones = document.getElementById('badge-cupones');
           if (badgeCupones) {
             badgeCupones.textContent = `${cuponesUsuario} Cupón(es) 10% OFF`;
+          }
+
+          const inputCodigo = document.getElementById('input-codigo-ref');
+          if (inputCodigo) {
+            inputCodigo.value = codigoReferidoUsuario;
           }
         }
 
@@ -208,6 +222,24 @@
       }
     });
 
+    // Función para copiar el código de referido al portapapeles
+    window.copiarCodigoRef = function() {
+      if (!codigoReferidoUsuario) return;
+      navigator.clipboard.writeText(codigoReferidoUsuario).then(() => {
+        const btn = document.getElementById('btn-copiar-ref');
+        if (btn) {
+          btn.textContent = '¡Copiado!';
+          btn.classList.replace('bg-orange-500', 'bg-emerald-600');
+          setTimeout(() => {
+            btn.textContent = 'Copiar';
+            btn.classList.replace('bg-emerald-600', 'bg-orange-500');
+          }, 2000);
+        }
+      }).catch(err => {
+        console.error("Error al copiar código:", err);
+      });
+    };
+
     // Función para compartir el enlace personalizado por WhatsApp
     window.compartirPorWhatsApp = function() {
       if (!codigoReferidoUsuario) {
@@ -215,11 +247,10 @@
         return;
       }
 
-      // Reemplaza esta URL con la ruta pública de tu PWA en GitHub Pages
       const urlBaseApp = window.location.origin + window.location.pathname.replace('selector.html', 'index.html');
       const enlaceInvitacion = `${urlBaseApp}?ref=${codigoReferidoUsuario}`;
       
-      const mensaje = encodeURIComponent(`¡Hola! Únete a Voom Perú, la app de movilidad más rápida y segura. Regístrate con mi enlace y disfruta de beneficios: ${enlaceInvitacion}`);
+      const mensaje = encodeURIComponent(`¡Hola! Únete a Voom Perú, la app de movilidad más rápida y segura. Regístrate con mi código ${codigoReferidoUsuario} o entra aquí: ${enlaceInvitacion}`);
       
       window.open(`https://api.whatsapp.com/send?text=${mensaje}`, '_blank');
     };
@@ -342,7 +373,7 @@
           } else if (data.estado_cuenta === 'aprobado') {
             window.location.href = 'conductor.html';
           } else if (data.estado_cuenta === 'suspendido') {
-            window.location.href = 'tu cuenta de conductor se encuentra suspendida por la administración.', 'error';
+            mostrarMensaje("Tu cuenta de conductor se encuentra suspendida por la administración.", "error");
           } else {
             window.location.href = 'index_status.html';
           }
