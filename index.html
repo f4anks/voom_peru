@@ -88,21 +88,23 @@
 
   <!-- TARJETA PRINCIPAL -->
   <div id="app-content" class="w-full max-w-md bg-white rounded-3xl shadow-[0_15px_40px_-15px_rgba(0,0,0,0.08)] border border-slate-200/80 p-8 relative z-10">
-    
-    <!-- Encabezado con Isotipo Oficial y Voomer -->
-    <div class="text-center mb-6">
-      <div class="flex items-center justify-center gap-3 mb-2">
-        <!-- Isotipo Oficial de la app -->
-        <div class="w-14 h-14 bg-white rounded-2xl shadow-md border border-slate-100 flex items-center justify-center p-1.5 overflow-hidden">
-          <img src="./icons/icon-512.png" alt="Voom Isotipo" class="w-full h-full object-contain" />
-        </div>
-        <!-- Mascota Voomer -->
-        <div class="relative w-16 h-16 flex items-center justify-center">
-          <img src="./img/voomer.png" alt="Voomer" class="w-full h-full object-contain animate-voomer drop-shadow-sm" />
-        </div>
+    <!-- Encabezado con Isotipo a la izquierda y Voomer a la derecha -->
+    <div class="relative flex items-center justify-between mb-6 px-2">
+      <!-- Isotipo Oficial a la izquierda -->
+      <div class="w-12 h-12 bg-white rounded-2xl shadow-md border border-slate-100 flex items-center justify-center p-1.5 overflow-hidden">
+        <img src="./icons/icon-512.png" alt="Voom Isotipo" class="w-full h-full object-contain" />
       </div>
-      <h1 class="text-3xl font-black text-slate-900 tracking-tight">Voom</h1>
-      <p class="text-[11px] font-bold text-orange-600 uppercase tracking-widest mt-0.5">Rápido, Confiable y Seguro</p>
+
+      <!-- Título central -->
+      <div class="text-center absolute left-0 right-0 pointer-events-none">
+        <h1 class="text-3xl font-black text-slate-900 tracking-tight">Voom</h1>
+        <p class="text-[10px] font-bold text-orange-600 uppercase tracking-widest mt-0.5">Rápido y Seguro</p>
+      </div>
+
+      <!-- Mascota Voomer a la derecha -->
+      <div class="relative w-14 h-14 flex items-center justify-center">
+        <img src="./img/voomer.png" alt="Voomer" class="w-full h-full object-contain animate-voomer drop-shadow-sm" />
+      </div>
     </div>
 
     <div class="flex bg-slate-100 p-1.5 rounded-2xl mb-6 border border-slate-200/80">
