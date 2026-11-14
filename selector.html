@@ -30,7 +30,6 @@
         },
       });
 
-      // Escuchar cuando el usuario hace clic en una notificación Push
       OneSignal.Notifications.addEventListener("click", (event) => {
         const notif = event.notification;
         const titulo = notif.title || "Aviso Importante";
@@ -57,7 +56,7 @@
   <div class="absolute -bottom-24 -right-24 w-80 h-80 bg-amber-400/15 rounded-full blur-3xl pointer-events-none"></div>
 
   <!-- TARJETA PRINCIPAL DEL SELECTOR -->
-  <div class="w-full max-w-md bg-white rounded-3xl shadow-[0_15px_40px_-15px_rgba(0,0,0,0.08)] border border-slate-200/80 p-8 relative z-10 space-y-6">
+  <div class="w-full max-w-md bg-white rounded-3xl shadow-[0_15px_40px_-15px_rgba(0,0,0,0.08)] border border-slate-200/80 p-8 relative z-10 space-y-5">
     
     <div class="text-center">
       <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-tr from-orange-500 via-orange-600 to-amber-500 text-white rounded-2xl shadow-lg shadow-orange-500/25 mb-3">
@@ -94,6 +93,24 @@
           <h3 class="text-sm font-black text-slate-800">Quiero Conducir</h3>
           <p class="text-[11px] text-slate-500 font-medium">Conéctate para aceptar carreras y generar ingresos</p>
         </div>
+      </button>
+    </div>
+
+    <!-- TARJETA DE REFERIDOS Y CUPONES -->
+    <div class="p-4 bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-2xl space-y-2.5">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-black text-orange-900 uppercase tracking-wider flex items-center gap-1.5">
+          <span>🎁</span> Invita y Gana
+        </span>
+        <span id="badge-cupones" class="text-[10px] bg-orange-500 text-white font-black px-2.5 py-0.5 rounded-full shadow-xs">
+          0 Cupones 10% OFF
+        </span>
+      </div>
+      <p class="text-[11px] text-orange-800 font-medium leading-relaxed">
+        Comparte tu enlace. Cuando tu invitado complete su primer viaje, ambos ganan un <strong>10% de descuento</strong>.
+      </p>
+      <button onclick="compartirPorWhatsApp()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center gap-2">
+        <span>💬</span> Compartir mi enlace por WhatsApp
       </button>
     </div>
 
@@ -146,6 +163,8 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let temporizadorPush = null;
+    let codigoReferidoUsuario = '';
+    let cuponesUsuario = 0;
 
     document.addEventListener('DOMContentLoaded', async () => {
       const greetingEl = document.getElementById('user-greeting');
@@ -164,6 +183,23 @@
           greetingEl.textContent = `Hola, ${nombre}`;
         }
 
+        // Consultar datos de referidos y cupones del usuario actual
+        const { data: perfil } = await supabaseClient
+          .from('perfiles')
+          .select('codigo_referido, cupones_10_pct')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (perfil) {
+          codigoReferidoUsuario = perfil.codigo_referido || '';
+          cuponesUsuario = perfil.cupones_10_pct || 0;
+          
+          const badgeCupones = document.getElementById('badge-cupones');
+          if (badgeCupones) {
+            badgeCupones.textContent = `${cuponesUsuario} Cupón(es) 10% OFF`;
+          }
+        }
+
         iniciarEscuchaAnuncios();
 
       } catch (err) {
@@ -171,6 +207,22 @@
         if (greetingEl) greetingEl.textContent = `Hola, Usuario`;
       }
     });
+
+    // Función para compartir el enlace personalizado por WhatsApp
+    window.compartirPorWhatsApp = function() {
+      if (!codigoReferidoUsuario) {
+        alert("Tu código de referido se está cargando. Inténtalo de nuevo en un segundo.");
+        return;
+      }
+
+      // Reemplaza esta URL con la ruta pública de tu PWA en GitHub Pages
+      const urlBaseApp = window.location.origin + window.location.pathname.replace('selector.html', 'index.html');
+      const enlaceInvitacion = `${urlBaseApp}?ref=${codigoReferidoUsuario}`;
+      
+      const mensaje = encodeURIComponent(`¡Hola! Únete a Voom Perú, la app de movilidad más rápida y segura. Regístrate con mi enlace y disfruta de beneficios: ${enlaceInvitacion}`);
+      
+      window.open(`https://api.whatsapp.com/send?text=${mensaje}`, '_blank');
+    };
 
     // Función manual para forzar la petición de permisos de OneSignal al hacer clic en el botón
     window.activarNotificacionesManual = async function() {
@@ -290,7 +342,7 @@
           } else if (data.estado_cuenta === 'aprobado') {
             window.location.href = 'conductor.html';
           } else if (data.estado_cuenta === 'suspendido') {
-            mostrarMensaje("Tu cuenta de conductor se encuentra suspendida por la administración.", "error");
+            window.location.href = 'tu cuenta de conductor se encuentra suspendida por la administración.', 'error';
           } else {
             window.location.href = 'index_status.html';
           }
