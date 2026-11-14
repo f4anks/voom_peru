@@ -1,14 +1,15 @@
-// CONFIGURACIÓN DE SUPABASE
-const SUPABASE_URL = "https://gklquvthucityzgcamao.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM";
+// ==========================================
+// js/conductor.js - Lógica Integral del Conductor
+// ==========================================
 
 let supabaseClient = null;
 let map = null;
 let conductorMarker = null;
 let userConductor = null;
 let perfilConductor = null;
+let viajeActivoId = null;
 
-// Función para esperar la carga del SDK de Supabase en móviles
+// Espera segura de Supabase
 function esperarSupabase(intentos = 15) {
   return new Promise((resolve, reject) => {
     const verificar = (restantes) => {
@@ -38,7 +39,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    supabaseClient = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabaseClient = supabaseLib.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
     window.supabaseClient = supabaseClient;
 
     // Validar sesión activa
@@ -54,24 +55,20 @@ window.addEventListener('DOMContentLoaded', async () => {
       verificarAnunciosGlobales('conductor');
     }
 
-    // Consultar perfil del conductor en Supabase incluyendo campos clave de registro
+    // Consultar perfil del conductor
     const { data: perfil, error } = await supabaseClient
       .from('perfiles')
       .select('estado_cuenta, vehiculo_placa, vehiculo_matricula, nombre_completo, tipo_servicio, dni')
       .eq('id', user.id)
       .maybeSingle();
 
-    // Validar si ya completó su registro anteriormente
     const estaRegistrado = perfil && (perfil.vehiculo_placa || perfil.vehiculo_matricula || perfil.dni);
 
-    // Si no existe perfil o nunca se ha registrado, enviar al formulario de registro por única vez
     if (error || !perfil || !estaRegistrado) {
       window.location.href = 'registro_cond.html';
       return;
     }
 
-    // Si ya está registrado pero su cuenta NO está aprobada (pendiente, suspendida, etc.),
-    // enviar siempre a la pantalla de estatus dedicada para evitar duplicados.
     if (perfil.estado_cuenta !== 'aprobado') {
       window.location.href = 'index_status.html';
       return;
@@ -85,13 +82,12 @@ window.addEventListener('DOMContentLoaded', async () => {
       elGreeting.textContent = `Hola, ${nombreDisplay}`;
     }
 
-    // --- PANEL APROBADO ---
     if (statusPanel) {
-      statusPanel.textContent = `¡Cuenta Aprobada! Conéctate para recibir solicitudes (${(perfil.tipo_servicio || 'Servicio').toUpperCase()}).`;
+      statusPanel.textContent = `¡Cuenta Aprobada! Servicio: ${(perfil.tipo_servicio || 'Servicio').toUpperCase()}`;
       statusPanel.className = "p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-bold text-center";
     }
 
-    // Inicializar Mapa de forma segura
+    // Inicializar Mapa
     setTimeout(() => {
       const mapContainer = document.getElementById('map');
       if (mapContainer && typeof L !== 'undefined' && !map) {
@@ -117,6 +113,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     }, 400);
 
+    // Verificar si ya tiene un viaje activo en curso o aceptado
+    await verificarViajeActivoConductor();
+
     cargarViajesPendientes();
     escucharNuevosViajes();
 
@@ -136,6 +135,7 @@ function mostrarErrorPantalla(mensaje) {
 
 async function cargarViajesPendientes() {
   if (!perfilConductor || !perfilConductor.tipo_servicio) return;
+  if (viajeActivoId) return; // Si ya tiene un viaje en curso, no muestra la lista de pendientes
 
   const { data: viajes, error } = await supabaseClient
     .from('viajes')
@@ -185,10 +185,11 @@ function escucharNuevosViajes() {
     .on('postgres_changes', { 
       event: '*', 
       schema: 'public', 
-      table: 'viajes',
-      filter: `tipo_servicio=eq.${perfilConductor.tipo_servicio}`
+      table: 'viajes'
     }, () => {
-      cargarViajesPendientes();
+      if (!viajeActivoId) {
+        cargarViajesPendientes();
+      }
     })
     .subscribe();
 }
@@ -203,6 +204,60 @@ async function aceptarViaje(idViaje) {
     alert("No se pudo aceptar el viaje: " + error.message);
     return;
   }
+
+  viajeActivoId = idViaje;
   alert("🚀 ¡Viaje Aceptado!");
-  cargarViajesPendientes();
+  mostrarPanelViajeActivo('aceptado', idViaje);
+}
+
+async function verificarViajeActivoConductor() {
+  const { data, error } = await supabaseClient
+    .from('viajes')
+    .select('*')
+    .eq('conductor_id', userConductor.id)
+    .in('estado', ['aceptado', 'en_curso'])
+    .maybeSingle();
+
+  if (!error && data) {
+    viajeActivoId = data.id;
+    mostrarPanelViajeActivo(data.estado, data.id);
+  }
+}
+
+function mostrarPanelViajeActivo(estado, idViaje) {
+  const contenedor = document.getElementById('lista-viajes');
+  if (!contenedor) return;
+
+  let textoEstado = estado === 'aceptado' ? "Viaje Aceptado - Dirígete al origen" : "Viaje en Progreso hacia el destino";
+  let siguienteBotonHTML = estado === 'aceptado' 
+    ? `<button onclick="actualizarEstadoViaje('${idViaje}', 'en_curso')" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs uppercase shadow-md transition-all">Iniciar Viaje ➔</button>`
+    : `<button onclick="actualizarEstadoViaje('${idViaje}', 'completado')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs uppercase shadow-md transition-all">Finalizar Viaje ✅</button>`;
+
+  contenedor.innerHTML = `
+    <div class="p-5 bg-orange-50 border-2 border-orange-300 rounded-2xl space-y-3 text-center shadow-md">
+      <span class="text-[10px] font-black uppercase bg-orange-200 text-orange-900 px-2.5 py-1 rounded-full">${textoEstado}</span>
+      <p class="text-xs font-bold text-slate-700">Gestiona tu servicio activo en tiempo real.</p>
+      ${siguienteBotonHTML}
+    </div>
+  `;
+}
+
+async function actualizarEstadoViaje(idViaje, nuevoEstado) {
+  const { error } = await supabaseClient
+    .from('viajes')
+    .update({ estado: nuevoEstado })
+    .eq('id', idViaje);
+
+  if (error) {
+    alert("Error al actualizar estado: " + error.message);
+    return;
+  }
+
+  if (nuevoEstado === 'completado') {
+    alert("🏁 ¡Viaje finalizado con éxito!");
+    viajeActivoId = null;
+    cargarViajesPendientes();
+  } else {
+    verificarViajeActivoConductor();
+  }
 }
