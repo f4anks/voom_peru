@@ -1,3 +1,7 @@
+// ==========================================
+// js/pasajero.js - Lógica Integral del Pasajero
+// ==========================================
+
 let supabaseClient = null;
 let map = null;
 let origenMarker = null;
@@ -5,8 +9,8 @@ let destinoMarker = null;
 let currentUser = null;
 let debounceTimer = null;
 let modoSeleccion = 'destino';
+let viajeActualId = null;
 
-// Respaldo seguro por si CONFIG_VOOM aún no ha cargado
 const CONFIG_DEFECTO = {
   SUPABASE_URL: "https://gklquvthucityzgcamao.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM",
@@ -22,7 +26,6 @@ function getConfig() {
 let origenCoords = { ...(getConfig().UBICACION_DEFECTO || CONFIG_DEFECTO.UBICACION_DEFECTO) };
 let destinoCoords = null;
 
-// INICIO INMEDIATO: El mapa y la interfaz cargan al instante sin bloqueos de red
 window.addEventListener('DOMContentLoaded', () => {
   inicializarMapa();
   configurarBuscadorDestino();
@@ -34,6 +37,7 @@ async function conectarSupabaseEnSegundoPlano() {
     if (window.supabase && window.supabase.createClient) {
       const config = getConfig();
       supabaseClient = window.supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+      window.supabaseClient = supabaseClient;
       
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (user) {
@@ -42,6 +46,7 @@ async function conectarSupabaseEnSegundoPlano() {
         if (nameEl) {
           nameEl.textContent = user.user_metadata?.full_name || user.email.split('@')[0];
         }
+        verificarViajeActivoPasajero();
       }
     }
   } catch (err) {
@@ -57,7 +62,6 @@ function inicializarMapa() {
   const mapContainer = document.getElementById('map');
   if (!mapContainer || typeof L === 'undefined' || map !== null) return;
 
-  // Inicializar mapa centrado en Lima, Perú
   map = L.map('map', { zoomControl: false }).setView([origenCoords.lat, origenCoords.lng], 15);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -134,7 +138,6 @@ function actualizarPosicionDestino(lat, lng) {
   obtenerDireccionPorCoords(lat, lng, 'destino');
   recalcularTarifasViaje();
 
-  // Habilitar botón de solicitar automáticamente al colocar destino
   const btnSolicitar = document.getElementById('btn-solicitar');
   if (btnSolicitar) {
     btnSolicitar.disabled = false;
@@ -274,7 +277,7 @@ async function solicitarViaje() {
       : config.TARIFA.tarifaMinima;
 
     if (supabaseClient && currentUser) {
-      await supabaseClient.from('viajes').insert({
+      const { data, error } = await supabaseClient.from('viajes').insert({
         pasajero_id: currentUser.id,
         tipo_servicio: servicioActual,
         origen_lat: origenCoords.lat,
@@ -284,20 +287,68 @@ async function solicitarViaje() {
         destino_lng: destinoCoords ? destinoCoords.lng : null,
         precio: precioBase,
         estado: 'buscando'
-      });
+      }).select().single();
+
+      if (!error && data) {
+        viajeActualId = data.id;
+        escribirEstadoPasajero("🔍 Buscando conductor disponible...");
+        escucharEstadoViajePasajero(data.id);
+      }
     }
-
-    if (estadoTexto) estadoTexto.textContent = "🚀 ¡Viaje solicitado! Buscando conductor cercano...";
-
-    setTimeout(() => {
-      window.location.href = 'selector.html';
-    }, 2000);
-
   } catch (err) {
     console.error("Error al solicitar viaje:", err);
     if (estadoTexto) estadoTexto.textContent = "🚀 ¡Solicitud simulada con éxito!";
-    setTimeout(() => {
-      window.location.href = 'selector.html';
-    }, 1500);
   }
+}
+
+function escribirEstadoPasajero(texto) {
+  const estadoBox = document.getElementById('estado-viaje-box');
+  const estadoTexto = document.getElementById('estado-viaje-texto');
+  if (estadoBox) estadoBox.classList.remove('hidden');
+  if (estadoTexto) estadoTexto.textContent = texto;
+}
+
+async function verificarViajeActivoPasajero() {
+  if (!currentUser) return;
+  const { data, error } = await supabaseClient
+    .from('viajes')
+    .select('*')
+    .eq('pasajero_id', currentUser.id)
+    .in('estado', ['buscando', 'aceptado', 'en_curso'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!error && data) {
+    viajeActualId = data.id;
+    if (data.estado === 'buscando') escribirEstadoPasajero("🔍 Buscando conductor disponible...");
+    else if (data.estado === 'aceptado') escribirEstadoPasajero("🚗 ¡Conductor asignado! Va en camino a tu origen.");
+    else if (data.estado === 'en_curso') escribirEstadoPasajero("🛣️ Viaje en curso hacia tu destino...");
+    
+    escucharEstadoViajePasajero(data.id);
+  }
+}
+
+function escucharEstadoViajePasajero(idViaje) {
+  supabaseClient
+    .channel(`pasajero-viaje-${idViaje}`)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'viajes',
+      filter: `id=eq.${idViaje}`
+    }, (payload) => {
+      const nuevoEstado = payload.new.estado;
+      if (nuevoEstado === 'aceptado') {
+        escribirEstadoPasajero("🚗 ¡Un conductor ha aceptado tu viaje y va en camino!");
+      } else if (nuevoEstado === 'en_curso') {
+        escribirEstadoPasajero("🛣️ Tu viaje está en marcha hacia el destino.");
+      } else if (nuevoEstado === 'completado') {
+        escribirEstadoPasajero("✅ ¡Viaje finalizado con éxito! Gracias por viajar en Voom.");
+        setTimeout(() => {
+          window.location.href = 'selector.html';
+        }, 3000);
+      }
+    })
+    .subscribe();
 }
