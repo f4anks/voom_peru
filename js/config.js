@@ -1,4 +1,4 @@
-// Configuración Global de Voom Perú (Tarifas Actualizadas)
+// Configuración Global de Voom Perú (Tarifas Optimizadas)
 const CONFIG_VOOM = {
   SUPABASE_URL: "https://gklquvthucityzgcamao.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM",
@@ -10,19 +10,19 @@ const CONFIG_VOOM = {
     nombre: "Centro Comercial Plaza Norte, Lima"
   },
 
-  // Tarifas Incrementadas
+  // Tarifas Balanceadas frente al mercado
   TARIFA: {
-    precioBase: 5.00,      // Bajada de bandera (sube de 3.20 a 5.00 S/)
-    precioPorKm: 1.50,     // Precio por km (sube de 0.90 a 1.50 S/)
-    tarifaMinima: 7.00     // Tarifa mínima garantizada (sube de 4.50 a 7.00 S/)
+    precioBase: 7.00,      // Bajada de bandera óptima
+    precioPorKm: 2.20,     // Precio por km competitivo
+    tarifaMinima: 10.00    // Tarifa mínima garantizada para distancias cortas
   },
 
-  // Multiplicadores por categoría ajustados al alza
+  // Multiplicadores por categoría
   MULTIPLICADORES: {
-    moto: 0.90,            // Envíos / Moto
-    economico: 1.0,        // Referencia estándar
-    confort: 1.35,         // Auto moderno con A/C
-    flete: 2.50,           // Carga / Camioneta
+    moto: 0.85,            // Envíos / Moto (más económico)
+    economico: 1.0,        // Referencia estándar de ciudad
+    confort: 1.40,         // Auto moderno con A/C
+    flete: 2.60,           // Carga / Camioneta
     grua: 5.00             // Servicio de remolque 24/7
   }
 };
