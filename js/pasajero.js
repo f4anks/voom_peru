@@ -1,5 +1,5 @@
 // ==========================================
-// js/pasajero.js - Lógica Integral del Pasajero (Con Cupones de Referidos)
+// js/pasajero.js - Lógica Integral del Pasajero (Con Cupones de Referidos y Nuevas Tarifas)
 // ==========================================
 
 let supabaseClient = null;
@@ -15,9 +15,9 @@ let cuponesDisponibles = 0;
 const CONFIG_DEFECTO = {
   SUPABASE_URL: "https://gklquvthucityzgcamao.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM",
-  UBICACION_DEFECTO: { lat: -12.046374, lng: -77.042793 },
-  TARIFA: { precioBase: 1.00, precioPorKm: 0.50, tarifaMinima: 2.00 },
-  MULTIPLICADORES: { moto: 1.0, economico: 1.5, confort: 2.0, flete: 3.5, grua: 6.0 }
+  UBICACION_DEFECTO: { lat: -11.9961, lng: -77.0583, nombre: "Centro Comercial Plaza Norte, Lima" },
+  TARIFA: { precioBase: 6.00, precioPorKm: 3.00, tarifaMinima: 10.00 },
+  MULTIPLICADORES: { moto: 0.85, economico: 1.0, confort: 1.40, flete: 2.60, grua: 5.00 }
 };
 
 function getConfig() {
@@ -307,7 +307,6 @@ async function solicitarViaje() {
       : config.TARIFA.tarifaMinima;
 
     if (supabaseClient && currentUser) {
-      // Si el usuario tiene cupones, descontamos 1 de su saldo en perfiles
       if (cuponesDisponibles > 0) {
         await supabaseClient
           .from('perfiles')
