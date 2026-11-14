@@ -1,5 +1,5 @@
 // ==========================================
-// js/pasajero.js - Lógica Integral del Pasajero
+// js/pasajero.js - Lógica Integral del Pasajero (Con Cupones de Referidos)
 // ==========================================
 
 let supabaseClient = null;
@@ -10,6 +10,7 @@ let currentUser = null;
 let debounceTimer = null;
 let modoSeleccion = 'destino';
 let viajeActualId = null;
+let cuponesDisponibles = 0;
 
 const CONFIG_DEFECTO = {
   SUPABASE_URL: "https://gklquvthucityzgcamao.supabase.co",
@@ -46,11 +47,30 @@ async function conectarSupabaseEnSegundoPlano() {
         if (nameEl) {
           nameEl.textContent = user.user_metadata?.full_name || user.email.split('@')[0];
         }
+        await cargarCuponesPasajero();
         verificarViajeActivoPasajero();
       }
     }
   } catch (err) {
     console.warn("Modo local o sin sesión activa en Supabase:", err);
+  }
+}
+
+async function cargarCuponesPasajero() {
+  if (!supabaseClient || !currentUser) return;
+  try {
+    const { data } = await supabaseClient
+      .from('perfiles')
+      .select('cupones_10_pct')
+      .eq('id', currentUser.id)
+      .maybeSingle();
+
+    cuponesDisponibles = data?.cupones_10_pct || 0;
+    if (cuponesDisponibles > 0) {
+      console.log(`🎁 Tienes ${cuponesDisponibles} cupón(es) de 10% de descuento disponible(s).`);
+    }
+  } catch (err) {
+    console.warn("Error al cargar cupones del pasajero:", err);
   }
 }
 
@@ -142,7 +162,7 @@ function actualizarPosicionDestino(lat, lng) {
   if (btnSolicitar) {
     btnSolicitar.disabled = false;
     btnSolicitar.className = "w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-orange-500/25 text-xs tracking-wider uppercase active:scale-[0.98]";
-    btnSolicitar.textContent = "Solicitar Viaje 🚀";
+    btnSolicitar.textContent = cuponesDisponibles > 0 ? "Solicitar Viaje (¡10% OFF Aplicado!) 🚀" : "Solicitar Viaje 🚀";
   }
 }
 
@@ -195,10 +215,20 @@ function recalcularTarifasViaje() {
       precioCalculado = tarifaMinima * mult;
     }
 
+    // Aplicar 10% de descuento si el pasajero tiene cupones disponibles
+    let precioFinal = precioCalculado;
+    if (cuponesDisponibles > 0) {
+      precioFinal = precioCalculado * 0.90;
+    }
+
     const priceTag = card.querySelector('.price-tag');
     if (priceTag) {
-      priceTag.setAttribute('data-base', precioCalculado.toFixed(2));
-      priceTag.textContent = `S/ ${precioCalculado.toFixed(2)}`;
+      priceTag.setAttribute('data-base', precioFinal.toFixed(2));
+      if (cuponesDisponibles > 0) {
+        priceTag.innerHTML = `<span class="line-through text-[9px] text-slate-400 mr-1">S/ ${precioCalculado.toFixed(2)}</span> S/ ${precioFinal.toFixed(2)} <span class="text-[8px] bg-emerald-100 text-emerald-700 px-1 rounded">-10%</span>`;
+      } else {
+        priceTag.textContent = `S/ ${precioFinal.toFixed(2)}`;
+      }
     }
   });
 }
@@ -272,11 +302,20 @@ async function solicitarViaje() {
     const servicioActual = window.servicioSeleccionado || 'economico';
     const selectedCard = document.querySelector(`[data-service="${servicioActual}"]`);
     const config = getConfig();
-    const precioBase = selectedCard && selectedCard.querySelector('.price-tag').getAttribute('data-base') 
+    const precioFinal = selectedCard && selectedCard.querySelector('.price-tag').getAttribute('data-base') 
       ? parseFloat(selectedCard.querySelector('.price-tag').getAttribute('data-base')) 
       : config.TARIFA.tarifaMinima;
 
     if (supabaseClient && currentUser) {
+      // Si el usuario tiene cupones, descontamos 1 de su saldo en perfiles
+      if (cuponesDisponibles > 0) {
+        await supabaseClient
+          .from('perfiles')
+          .update({ cupones_10_pct: cuponesDisponibles - 1 })
+          .eq('id', currentUser.id);
+        cuponesDisponibles--;
+      }
+
       const { data, error } = await supabaseClient.from('viajes').insert({
         pasajero_id: currentUser.id,
         tipo_servicio: servicioActual,
@@ -285,7 +324,7 @@ async function solicitarViaje() {
         destino_direccion: destino,
         destino_lat: destinoCoords ? destinoCoords.lat : null,
         destino_lng: destinoCoords ? destinoCoords.lng : null,
-        precio: precioBase,
+        precio: precioFinal,
         estado: 'buscando'
       }).select().single();
 
