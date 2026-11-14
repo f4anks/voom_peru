@@ -89,14 +89,20 @@
   <!-- TARJETA PRINCIPAL -->
   <div id="app-content" class="w-full max-w-md bg-white rounded-3xl shadow-[0_15px_40px_-15px_rgba(0,0,0,0.08)] border border-slate-200/80 p-8 relative z-10">
     
-    <!-- Encabezado con Voomer -->
+    <!-- Encabezado con Isotipo Oficial y Voomer -->
     <div class="text-center mb-6">
-      <div class="relative inline-flex items-center justify-center w-24 h-24 mx-auto mb-1">
-        <div class="absolute inset-1 bg-gradient-to-tr from-orange-400/25 to-amber-300/25 rounded-full blur-lg"></div>
-        <img src="./img/voomer.png" alt="Voomer - Mascota Oficial Voom" class="relative w-24 h-24 object-contain drop-shadow-md animate-voomer hover:scale-105 transition-transform duration-300" />
+      <div class="flex items-center justify-center gap-3 mb-2">
+        <!-- Isotipo Oficial de la app -->
+        <div class="w-14 h-14 bg-white rounded-2xl shadow-md border border-slate-100 flex items-center justify-center p-1.5 overflow-hidden">
+          <img src="./icons/icon-512.png" alt="Voom Isotipo" class="w-full h-full object-contain" />
+        </div>
+        <!-- Mascota Voomer -->
+        <div class="relative w-16 h-16 flex items-center justify-center">
+          <img src="./img/voomer.png" alt="Voomer" class="w-full h-full object-contain animate-voomer drop-shadow-sm" />
+        </div>
       </div>
       <h1 class="text-3xl font-black text-slate-900 tracking-tight">Voom</h1>
-      <p class="text-[11px] font-bold text-orange-600 uppercase tracking-widest mt-1">Rápido, Confiable y Seguro</p>
+      <p class="text-[11px] font-bold text-orange-600 uppercase tracking-widest mt-0.5">Rápido, Confiable y Seguro</p>
     </div>
 
     <div class="flex bg-slate-100 p-1.5 rounded-2xl mb-6 border border-slate-200/80">
