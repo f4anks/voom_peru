@@ -1,7 +1,8 @@
 // ==========================================
-// js/index.js - Lógica de Autenticación y PWA (Corregido OneSignal y Duplicados)
+// js/index.js - Lógica de Autenticación, PWA Estricta y OneSignal
 // ==========================================
 
+// Configuración e Inicialización de Supabase
 const SUPABASE_URL = 'https://gklquvthucityzgcamao.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -24,21 +25,20 @@ window.addEventListener('DOMContentLoaded', () => {
   // 1. Verificamos el estado de la PWA primero
   checkPWAState();
 
-  // 2. Si NO está instalada como PWA, detenemos la ejecución
+  // 2. Si NO está instalada como PWA, detenemos la ejecución para que no valide sesión ni permita operar en web
   if (!isRunningStandalone()) {
     console.warn("Acceso bloqueado: La aplicación debe instalarse como PWA para ser utilizada.");
     return;
   }
-  
-  // 3. Si SÍ es una PWA instalada, validamos sesión en Supabase
+
+  // 3. Si SÍ es una PWA instalada, procedemos con la validación estricta contra el servidor real de Supabase
   supabaseClient.auth.getUser().then(async ({ data: { user }, error }) => {
     if (user && !error) {
-      // Sincronizar usuario con OneSignal al recuperar sesión activa para evitar duplicados
       vincularOneSignalUsuario(user.id);
-
       mostrarMensaje("Sesión activa verificada. Redirigiendo...", "success");
-      setTimeout(() => window.location.href = 'selector.html', 500);
+      window.location.href = 'selector.html';
     } else {
+      // Si el usuario fue eliminado en Supabase o el token expiró, limpiamos el caché local
       await supabaseClient.auth.signOut();
     }
   }).catch(async (err) => {
@@ -47,13 +47,16 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// Función auxiliar para registrar el ID del usuario en OneSignal y evitar duplicados de dispositivos
+// Vincular el ID del usuario de Supabase con OneSignal para agrupar dispositivos
 function vincularOneSignalUsuario(userId) {
+  if (!userId) return;
   if (typeof OneSignalDeferred !== 'undefined') {
     OneSignalDeferred.push(async function(OneSignal) {
       try {
-        await OneSignal.login(userId);
-        console.log("✅ OneSignal vinculado al usuario:", userId);
+        if (OneSignal.User) {
+          await OneSignal.login(userId);
+          console.log("✅ OneSignal vinculado al External ID:", userId);
+        }
       } catch (err) {
         console.warn("Error al vincular OneSignal login:", err);
       }
@@ -84,21 +87,25 @@ if (btnTabLogin && btnTabRegister) {
 if (formLogin) {
   formLogin.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    if (!isRunningStandalone()) {
+      checkPWAState();
+      return;
+    }
+
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
 
     mostrarMensaje("Iniciando sesión...", "info");
 
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-    
+
     if (error) {
       mostrarMensaje(error.message, "error");
     } else {
-      // Vincular sesión en OneSignal para unificar dispositivos y evitar duplicados
       if (data && data.user) {
         vincularOneSignalUsuario(data.user.id);
       }
-
       mostrarMensaje("¡Sesión iniciada! Redirigiendo...", "success");
       setTimeout(() => window.location.href = 'selector.html', 800);
     }
@@ -109,6 +116,12 @@ if (formLogin) {
 if (formRegister) {
   formRegister.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    if (!isRunningStandalone()) {
+      checkPWAState();
+      return;
+    }
+
     const nombre = document.getElementById('reg-name').value;
     const dni = document.getElementById('reg-dni').value;
     const telefono = document.getElementById('reg-telefono').value;
@@ -136,7 +149,6 @@ if (formRegister) {
       return;
     }
 
-    // Vincular inmediatamente con OneSignal al registrarse
     if (data && data.user) {
       vincularOneSignalUsuario(data.user.id);
     }
@@ -156,7 +168,7 @@ if (formRegister) {
         body: JSON.stringify({
           titulo: "¡Bienvenido a Voom Perú! 🚗",
           mensaje: `Hola ${nombre}, tu cuenta asociada al celular ${telefono} ha sido registrada correctamente.`,
-          subscription_id: subscriptionId 
+          subscription_id: subscriptionId
         })
       });
     } catch (pushErr) {
@@ -174,7 +186,7 @@ function mostrarMensaje(texto, tipo) {
   if (!statusMsg) return;
   statusMsg.textContent = texto;
   statusMsg.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'border-red-200', 'bg-emerald-50', 'text-emerald-600', 'border-emerald-200', 'bg-slate-50', 'text-slate-600', 'border-slate-200');
-  
+
   if (tipo === 'error') {
     statusMsg.classList.add('bg-red-50', 'text-red-600', 'border-red-200');
   } else if (tipo === 'success') {
@@ -200,19 +212,23 @@ function togglePassword(idInput, idIcon) {
 
 // Manejo inteligente de PWA para Android vs iOS
 function isRunningStandalone() {
-  return (window.matchMedia('(display-mode: standalone)').matches) || 
-         (window.navigator.standalone === true) || 
+  return (window.matchMedia('(display-mode: standalone)').matches) ||
+         (window.navigator.standalone === true) ||
          document.referrer.includes('android-app://');
 }
 
 function checkPWAState() {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const standalone = isRunningStandalone();
 
-  if (isRunningStandalone()) {
+  if (standalone) {
     if (overlay) overlay.classList.add('hidden');
     if (iosBanner) iosBanner.classList.add('hidden');
     if (appContent) appContent.classList.remove('hidden');
   } else {
+    // Bloquear uso en navegador web normal hasta que esté instalada
+    if (appContent) appContent.classList.add('hidden');
+
     if (isIOS) {
       if (overlay) overlay.classList.add('hidden');
       if (iosBanner) iosBanner.classList.remove('hidden');
@@ -238,11 +254,11 @@ document.addEventListener('click', async (e) => {
   if (deferredPrompt) {
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    
+
     if (outcome === 'accepted') {
       console.log('Usuario aceptó instalar la PWA');
       if (overlay) overlay.classList.add('hidden');
-      if (appContent) appContent.classList.remove('hidden');
+      checkPWAState();
     } else {
       console.log('Usuario canceló la instalación');
     }
