@@ -1,4 +1,7 @@
-// Configuración e Inicialización de Supabase
+// ==========================================
+// js/index.js - Lógica de Autenticación y PWA (Corregido OneSignal y Duplicados)
+// ==========================================
+
 const SUPABASE_URL = 'https://gklquvthucityzgcamao.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -21,19 +24,21 @@ window.addEventListener('DOMContentLoaded', () => {
   // 1. Verificamos el estado de la PWA primero
   checkPWAState();
 
-  // 2. Si NO está instalada como PWA, detenemos la ejecución para que no valide sesión ni permita operar en web
+  // 2. Si NO está instalada como PWA, detenemos la ejecución
   if (!isRunningStandalone()) {
     console.warn("Acceso bloqueado: La aplicación debe instalarse como PWA para ser utilizada.");
     return;
   }
   
-  // 3. Si SÍ es una PWA instalada, procedemos con la validación estricta contra el servidor real de Supabase
+  // 3. Si SÍ es una PWA instalada, validamos sesión en Supabase
   supabaseClient.auth.getUser().then(async ({ data: { user }, error }) => {
     if (user && !error) {
+      // Sincronizar usuario con OneSignal al recuperar sesión activa para evitar duplicados
+      vincularOneSignalUsuario(user.id);
+
       mostrarMensaje("Sesión activa verificada. Redirigiendo...", "success");
-      window.location.href = 'selector.html';
+      setTimeout(() => window.location.href = 'selector.html', 500);
     } else {
-      // Si el usuario fue eliminado en Supabase o el token expiró, limpiamos el caché local
       await supabaseClient.auth.signOut();
     }
   }).catch(async (err) => {
@@ -41,6 +46,20 @@ window.addEventListener('DOMContentLoaded', () => {
     await supabaseClient.auth.signOut();
   });
 });
+
+// Función auxiliar para registrar el ID del usuario en OneSignal y evitar duplicados de dispositivos
+function vincularOneSignalUsuario(userId) {
+  if (typeof OneSignalDeferred !== 'undefined') {
+    OneSignalDeferred.push(async function(OneSignal) {
+      try {
+        await OneSignal.login(userId);
+        console.log("✅ OneSignal vinculado al usuario:", userId);
+      } catch (err) {
+        console.warn("Error al vincular OneSignal login:", err);
+      }
+    });
+  }
+}
 
 // Control de Tabs (Login / Registro)
 if (btnTabLogin && btnTabRegister) {
@@ -75,6 +94,11 @@ if (formLogin) {
     if (error) {
       mostrarMensaje(error.message, "error");
     } else {
+      // Vincular sesión en OneSignal para unificar dispositivos y evitar duplicados
+      if (data && data.user) {
+        vincularOneSignalUsuario(data.user.id);
+      }
+
       mostrarMensaje("¡Sesión iniciada! Redirigiendo...", "success");
       setTimeout(() => window.location.href = 'selector.html', 800);
     }
@@ -110,6 +134,11 @@ if (formRegister) {
     if (error) {
       mostrarMensaje(error.message, "error");
       return;
+    }
+
+    // Vincular inmediatamente con OneSignal al registrarse
+    if (data && data.user) {
+      vincularOneSignalUsuario(data.user.id);
     }
 
     mostrarMensaje("¡Registro completado! Enviando push de bienvenida...", "success");
