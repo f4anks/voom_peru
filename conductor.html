@@ -16,6 +16,9 @@
   <meta name="apple-mobile-web-app-title" content="Voom">
 
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- OneSignal Web Push SDK -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
   
   <!-- Leaflet CSS & JS (Mapa para el conductor) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -31,7 +34,7 @@
     }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col justify-between p-4 sm:p-6">
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col justify-between p-4 sm:p-6 pb-24">
 
   <!-- CONTENIDO PRINCIPAL DEL CONDUCTOR -->
   <div class="w-full max-w-2xl mx-auto bg-white rounded-3xl shadow-[0_15px_40px_-15px_rgba(0,0,0,0.08)] border border-slate-200/80 p-6 sm:p-8 my-auto space-y-6">
@@ -52,13 +55,17 @@
     </div>
 
     <div class="space-y-4">
-      <div class="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between">
+      <div class="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between gap-3">
         <div>
           <h3 class="text-xs font-black text-slate-800 uppercase">Estado de Conexión</h3>
-          <p class="text-[11px] text-slate-500 font-medium">Activa tu disponibilidad para recibir solicitudes de viaje</p>
+          <p id="subtexto-conexion" class="text-[11px] text-slate-500 font-medium">Activa tu disponibilidad para recibir solicitudes de viaje</p>
         </div>
-        <div id="toggle-container">
-          <!-- El interruptor o estado se gestionará desde conductor.js -->
+        <div id="toggle-container" class="shrink-0">
+          <button id="btn-estado-conductor" type="button" onclick="alternarEstadoConductor()"
+            class="flex items-center gap-2 px-4 py-2.5 rounded-full font-black text-xs uppercase tracking-wider transition-all shadow-md bg-slate-200 text-slate-700 active:scale-95">
+            <span id="indicador-punto" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+            <span id="texto-estado-conductor">Inactivo</span>
+          </button>
         </div>
       </div>
     </div>
@@ -84,18 +91,39 @@
     </button>
   </div>
 
+  <!-- BOTÓN CIRCULAR FLOTANTE DENTRO DE LA APP -->
+  <button id="burbuja-flotante-conductor" type="button" onclick="alternarEstadoConductor()" title="Cambiar disponibilidad"
+    class="fixed bottom-6 right-5 z-50 w-16 h-16 rounded-full shadow-2xl border-2 border-white flex flex-col items-center justify-center transition-all duration-300 bg-slate-800 text-white active:scale-90">
+    <span id="burbuja-ping" class="hidden absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 animate-ping"></span>
+    <img src="./icons/icon-192.png" alt="Voom Estado" class="w-8 h-8 object-contain relative z-10 rounded-full" />
+    <span id="burbuja-label" class="text-[8px] font-black uppercase tracking-wider relative z-10 mt-0.5 text-slate-300">OFF</span>
+  </button>
+
   <!-- Scripts JS independientes al final -->
   <script src="js/anuncios.js"></script>
   <script src="js/conductor.js"></script>
   
   <script>
+    // Bloqueo estricto: solo permitir ejecución como PWA instalada
+    const esPWAInstalada =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true ||
+      document.referrer.includes('android-app://');
+
+    if (!esPWAInstalada) {
+      window.location.replace('index.html');
+    }
+
     // Asignación segura a window para evitar errores
     window.SUPABASE_URL = window.SUPABASE_URL || "https://gklquvthucityzgcamao.supabase.co";
     window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "sb_publishable_-p-YL6bWXAQGTddkmm9_mA_HgKlR_eM";
     
     let supabaseClient = null;
+    window.conductorActivo = false;
+    let wakeLock = null;
+    let conductorUserId = null;
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
       // Inicializar cliente Supabase global
       if (window.supabase && window.supabase.createClient) {
         supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
@@ -103,6 +131,31 @@
 
       if (typeof verificarAnunciosGlobales === 'function') {
         verificarAnunciosGlobales('conductor');
+      }
+
+      // Cargar estado actual del conductor desde Supabase
+      if (supabaseClient) {
+        try {
+          const { data: { user } } = await supabaseClient.auth.getUser();
+          if (user) {
+            conductorUserId = user.id;
+            const { data: perfil } = await supabaseClient
+              .from('perfiles')
+              .select('en_linea, estado_cuenta')
+              .eq('id', user.id)
+              .maybeSingle();
+
+            if (perfil) {
+              window.conductorActivo = Boolean(perfil.en_linea);
+              actualizarUIConductor(window.conductorActivo);
+              if (window.conductorActivo) {
+                activarPantallaDespierta();
+              }
+            }
+          }
+        } catch (err) {
+          console.warn("Error cargando estado inicial del conductor:", err);
+        }
       }
 
       window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -124,7 +177,12 @@
           notifyButton: { enable: false }
         });
 
+        if (conductorUserId && OneSignal.User) {
+          await OneSignal.login(conductorUserId);
+        }
+
         await OneSignal.User.addTag("rol", "conductores");
+        await OneSignal.User.addTag("en_linea", window.conductorActivo ? "true" : "false");
 
         if (!OneSignal.User.PushSubscription.optedIn) {
           OneSignal.Slidedown.promptPush();
@@ -132,8 +190,117 @@
       });
     });
 
+    window.alternarEstadoConductor = async function() {
+      const nuevoEstado = !window.conductorActivo;
+      window.conductorActivo = nuevoEstado;
+      actualizarUIConductor(nuevoEstado);
+
+      // 1. Actualizar estado en Supabase
+      if (supabaseClient && conductorUserId) {
+        try {
+          await supabaseClient
+            .from('perfiles')
+            .update({ en_linea: nuevoEstado })
+            .eq('id', conductorUserId);
+        } catch (err) {
+          console.error("Error al actualizar estado en_linea:", err);
+        }
+      }
+
+      // 2. Actualizar etiqueta en OneSignal para filtrar notificaciones push en segundo plano
+      if (typeof OneSignalDeferred !== 'undefined') {
+        OneSignalDeferred.push(async function(OneSignal) {
+          try {
+            await OneSignal.User.addTag("en_linea", nuevoEstado ? "true" : "false");
+          } catch (e) {
+            console.warn("No se pudo actualizar tag en OneSignal:", e);
+          }
+        });
+      }
+
+      // 3. Mantener pantalla encendida si está activo y notificar a conductor.js si tiene hooks
+      if (nuevoEstado) {
+        activarPantallaDespierta();
+        if (typeof window.alActivarConductor === 'function') {
+          window.alActivarConductor();
+        }
+      } else {
+        liberarPantallaDespierta();
+        if (typeof window.alDesactivarConductor === 'function') {
+          window.alDesactivarConductor();
+        }
+      }
+    };
+
+    function actualizarUIConductor(activo) {
+      const btn = document.getElementById('btn-estado-conductor');
+      const punto = document.getElementById('indicador-punto');
+      const texto = document.getElementById('texto-estado-conductor');
+      const subtexto = document.getElementById('subtexto-conexion');
+      const burbuja = document.getElementById('burbuja-flotante-conductor');
+      const ping = document.getElementById('burbuja-ping');
+      const burbujaLabel = document.getElementById('burbuja-label');
+
+      if (activo) {
+        if (btn) btn.className = "flex items-center gap-2 px-4 py-2.5 rounded-full font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/30 bg-emerald-500 text-white active:scale-95";
+        if (punto) punto.className = "w-2.5 h-2.5 rounded-full bg-white animate-pulse";
+        if (texto) texto.textContent = "Activo";
+        if (subtexto) subtexto.textContent = "En línea: recibiendo solicitudes de viaje";
+
+        if (burbuja) {
+          burbuja.classList.remove('bg-slate-800');
+          burbuja.classList.add('bg-emerald-500', 'shadow-emerald-500/40');
+        }
+        if (ping) ping.classList.remove('hidden');
+        if (burbujaLabel) {
+          burbujaLabel.textContent = "ON";
+          burbujaLabel.className = "text-[8px] font-black uppercase tracking-wider relative z-10 mt-0.5 text-white";
+        }
+      } else {
+        if (btn) btn.className = "flex items-center gap-2 px-4 py-2.5 rounded-full font-black text-xs uppercase tracking-wider transition-all shadow-md bg-slate-200 text-slate-700 active:scale-95";
+        if (punto) punto.className = "w-2.5 h-2.5 rounded-full bg-slate-500";
+        if (texto) texto.textContent = "Inactivo";
+        if (subtexto) subtexto.textContent = "Desconectado: activa tu disponibilidad para recibir viajes";
+
+        if (burbuja) {
+          burbuja.classList.remove('bg-emerald-500', 'shadow-emerald-500/40');
+          burbuja.classList.add('bg-slate-800');
+        }
+        if (ping) ping.classList.add('hidden');
+        if (burbujaLabel) {
+          burbujaLabel.textContent = "OFF";
+          burbujaLabel.className = "text-[8px] font-black uppercase tracking-wider relative z-10 mt-0.5 text-slate-300";
+        }
+      }
+    }
+
+    async function activarPantallaDespierta() {
+      try {
+        if ('wakeLock' in navigator && wakeLock === null) {
+          wakeLock = await navigator.wakeLock.request('screen');
+        }
+      } catch (e) {
+        console.warn("WakeLock no disponible:", e);
+      }
+    }
+
+    function liberarPantallaDespierta() {
+      if (wakeLock !== null) {
+        wakeLock.release().then(() => { wakeLock = null; }).catch(() => {});
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && window.conductorActivo) {
+        activarPantallaDespierta();
+      }
+    });
+
     window.cerrarSesion = async function() {
       if (supabaseClient) {
+        if (conductorUserId) {
+          await supabaseClient.from('perfiles').update({ en_linea: false }).eq('id', conductorUserId);
+        }
         await supabaseClient.auth.signOut();
       }
       localStorage.clear();
